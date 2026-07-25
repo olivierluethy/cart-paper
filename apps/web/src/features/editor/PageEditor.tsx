@@ -1,14 +1,24 @@
-import { useEffect, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, type ReactNode } from 'react'
 import { BubbleMenu, EditorContent, useEditor, type Editor } from '@tiptap/react'
-import { Bold, Code, Italic, Link2, Strikethrough, Underline as UnderlineIcon } from 'lucide-react'
+import {
+  Bold,
+  Code,
+  ImagePlus,
+  Italic,
+  Link2,
+  Strikethrough,
+  Underline as UnderlineIcon,
+} from 'lucide-react'
 import { bookExtensions } from '@/features/editor/extensions'
 import { EditorToolbar, ToolButton } from '@/features/editor/EditorToolbar'
 import { useSlashMenu } from '@/features/editor/SlashMenu'
+import { useImageUpload } from '@/features/editor/useImageUpload'
 import { promptForLink } from '@/features/editor/linkPrompt'
 import { useModal } from '@/lib/modal'
 import type { JSONContent } from '@/lib/types'
 
 type Props = {
+  bookId: string
   /** Changing this remounts the document — one key per page. */
   pageKey: string
   doc: JSONContent
@@ -17,9 +27,21 @@ type Props = {
   toolbarExtra?: ReactNode
 }
 
-export function PageEditor({ pageKey, doc, onChange, onEditorReady, toolbarExtra }: Props) {
+export function PageEditor({ bookId, pageKey, doc, onChange, onEditorReady, toolbarExtra }: Props) {
   const { controller, menu } = useSlashMenu()
   const { open } = useModal()
+  const { insertFiles, uploading } = useImageUpload(bookId)
+  const editorRef = useRef<Editor | null>(null)
+  const fileInput = useRef<HTMLInputElement>(null)
+
+  const handleFiles = useCallback(
+    (files: FileList | File[]) => {
+      const editor = editorRef.current
+      if (!editor) return
+      void insertFiles(editor, files)
+    },
+    [insertFiles],
+  )
 
   const editor = useEditor(
     {
@@ -27,16 +49,33 @@ export function PageEditor({ pageKey, doc, onChange, onEditorReady, toolbarExtra
       content: doc,
       autofocus: false,
       editorProps: {
-        attributes: {
-          class: 'cart-prose focus:outline-none',
-          spellcheck: 'true',
+        attributes: { class: 'cart-prose focus:outline-none', spellcheck: 'true' },
+        handleDrop: (view, event) => {
+          const files = (event as DragEvent).dataTransfer?.files
+          if (!files?.length) return false
+          event.preventDefault()
+          const at = view.posAtCoords({
+            left: (event as DragEvent).clientX,
+            top: (event as DragEvent).clientY,
+          })
+          if (at) editorRef.current?.commands.setTextSelection(at.pos)
+          handleFiles(files)
+          return true
+        },
+        handlePaste: (_view, event) => {
+          const files = Array.from(event.clipboardData?.files ?? [])
+          if (!files.length) return false
+          event.preventDefault()
+          handleFiles(files)
+          return true
         },
       },
       onUpdate: ({ editor: instance }) => onChange(instance.getJSON() as JSONContent),
     },
-    // Rebuild on page change so undo history never spans two pages.
     [pageKey],
   )
+
+  editorRef.current = editor
 
   useEffect(() => {
     onEditorReady?.(editor)
@@ -47,7 +86,31 @@ export function PageEditor({ pageKey, doc, onChange, onEditorReady, toolbarExtra
 
   return (
     <div className="relative">
-      <EditorToolbar editor={editor} extra={toolbarExtra} />
+      <EditorToolbar
+        editor={editor}
+        extra={
+          <>
+            <ToolButton
+              icon={ImagePlus}
+              label={uploading > 0 ? 'Uploading…' : 'Insert image'}
+              disabled={uploading > 0}
+              onClick={() => fileInput.current?.click()}
+            />
+            {toolbarExtra}
+          </>
+        }
+      />
+      <input
+        ref={fileInput}
+        type="file"
+        accept="image/*"
+        multiple
+        hidden
+        onChange={(event) => {
+          if (event.target.files?.length) handleFiles(event.target.files)
+          event.target.value = ''
+        }}
+      />
 
       <BubbleMenu
         editor={editor}

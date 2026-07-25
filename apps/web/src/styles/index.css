@@ -143,6 +143,58 @@
     @apply rounded-sm;
   }
 
+  /* ---- images with placement ----------------------------------------
+     The editor's node view sets these inline; these rules cover every
+     other renderer (reader HTML, print view, server-side PDF export). */
+  .cart-prose figure[data-cart-image] {
+    margin: 1.6em 0;
+  }
+  .cart-prose figure[data-cart-image] img {
+    @apply block w-full rounded-sm border border-ink-line/60;
+  }
+  .cart-prose figure[data-cart-image] figcaption {
+    @apply mt-2 text-center font-ui text-xs leading-relaxed text-ink-faint;
+  }
+  .cart-prose figure[data-width='25'] {
+    width: 25%;
+  }
+  .cart-prose figure[data-width='50'] {
+    width: 50%;
+  }
+  .cart-prose figure[data-width='75'] {
+    width: 75%;
+  }
+  .cart-prose figure[data-width='100'] {
+    width: 100%;
+  }
+  .cart-prose figure[data-align='center'] {
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .cart-prose figure[data-align='left'] {
+    margin-right: auto;
+  }
+  .cart-prose figure[data-align='right'] {
+    margin-left: auto;
+  }
+  .cart-prose figure[data-align='full'] {
+    width: 100%;
+  }
+  .cart-prose figure[data-wrap='true'][data-align='left'] {
+    float: left;
+    margin: 0.4em 1.6em 1em 0;
+  }
+  .cart-prose figure[data-wrap='true'][data-align='right'] {
+    float: right;
+    margin: 0.4em 0 1em 1.6em;
+  }
+  /* Floats must not escape their page. */
+  .cart-prose::after {
+    content: '';
+    display: block;
+    clear: both;
+  }
+
   /* checklists */
   .cart-prose ul[data-type='taskList'] {
     @apply list-none pl-0;

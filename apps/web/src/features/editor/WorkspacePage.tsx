@@ -177,6 +177,7 @@ export function WorkspacePage() {
               <Loading label="Loading page…" />
             ) : (
               <PageEditor
+                bookId={book.data.id}
                 pageKey={active.data.id}
                 doc={active.data.content}
                 onChange={(doc) => autosave.schedule({ content: doc })}

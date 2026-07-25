@@ -11,6 +11,7 @@ import TextAlign from '@tiptap/extension-text-align'
 import TextStyle from '@tiptap/extension-text-style'
 import Underline from '@tiptap/extension-underline'
 import { BlockStyle } from '@/features/editor/extensions/BlockStyle'
+import { CartImage } from '@/features/editor/extensions/CartImage'
 import { FontScale } from '@/features/editor/extensions/FontScale'
 import { SlashCommand, type SlashController } from '@/features/editor/extensions/SlashCommand'
 
@@ -32,6 +33,7 @@ export function bookExtensions(options: {
     TextStyle,
     FontScale,
     BlockStyle,
+    CartImage,
     TaskList,
     TaskItem.configure({ nested: true }),
     TextAlign.configure({ types: ['heading', 'paragraph'], alignments: ['left', 'center', 'right'] }),
