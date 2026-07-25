@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 from app.core.config import settings
 from app.routers import (
     annotations,
+    avatar,
     assets,
     auth,
     books,
@@ -62,6 +63,7 @@ app.include_router(comments.router)
 app.include_router(ratings.router)
 app.include_router(notifications.router)
 app.include_router(users.router)
+app.include_router(avatar.router)
 app.include_router(imports.router)
 app.include_router(export.router)
 

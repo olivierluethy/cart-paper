@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Modal } from '@/components/Modal'
 import { Button } from '@/components/Button'
 import { Field, TextArea, Toggle } from '@/components/Field'
+import { AvatarSection } from '@/features/profile/AvatarSection'
 import { useAuth, useReadingSettings } from '@/lib/auth'
 import { useToast } from '@/lib/toast'
 import { cn } from '@/lib/utils'
@@ -85,6 +86,7 @@ export function SettingsModal({ onDone }: { onDone: () => void }) {
 
       {tab === 'Profile' ? (
         <div className="space-y-5">
+          <AvatarSection />
           <Field
             label="Display name"
             value={displayName}

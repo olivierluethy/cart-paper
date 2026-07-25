@@ -49,7 +49,7 @@ async def get_progress(
     )
 
 
-@router.api_route("/books/{ref}/progress", methods=["PUT", "PATCH"], response_model=ProgressOut)
+@router.patch("/books/{ref}/progress", response_model=ProgressOut)
 async def set_progress(
     ref: str, payload: ProgressIn, db: DbSession, user: CurrentUser, invite: InviteToken
 ) -> ProgressOut:
@@ -85,6 +85,14 @@ async def set_progress(
     row.updated_at = datetime.now(UTC)
     await db.flush()
     return await _progress_out(db, book.id, row)
+
+
+@router.put("/books/{ref}/progress", response_model=ProgressOut, include_in_schema=False)
+async def set_progress_put(
+    ref: str, payload: ProgressIn, db: DbSession, user: CurrentUser, invite: InviteToken
+) -> ProgressOut:
+    """Alias for PATCH — kept so existing callers keep working."""
+    return await set_progress(ref, payload, db, user, invite)
 
 
 @router.post("/books/{ref}/progress/restart", response_model=ProgressOut)
