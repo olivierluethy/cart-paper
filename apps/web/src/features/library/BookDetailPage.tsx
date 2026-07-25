@@ -8,7 +8,8 @@ import { ErrorState, Loading } from '@/components/States'
 import { ShareButton } from '@/features/library/ShareButton'
 import { useToggleFavorite } from '@/features/library/useFavorite'
 import { useAuthGate } from '@/features/auth/useAuthGate'
-import { useBook } from '@/lib/books'
+import { BookComments } from '@/features/comments/BookComments'
+import { useBook, usePages } from '@/lib/books'
 import { useInviteToken } from '@/lib/invite'
 import { cn, formatDate, pluralize } from '@/lib/utils'
 
@@ -18,6 +19,7 @@ export function BookDetailPage() {
   const navigate = useNavigate()
   const { requireAuth } = useAuthGate()
   const book = useBook(slug, invite)
+  const pages = usePages(slug, invite)
   const favorite = useToggleFavorite({
     id: book.data?.id ?? '',
     slug: book.data?.slug ?? '',
@@ -169,6 +171,16 @@ export function BookDetailPage() {
           )}
         </div>
       </div>
+
+      <BookComments
+        book={item}
+        invite={invite}
+        pageIndexOf={(pageId) => {
+          if (!pageId) return null
+          const at = (pages.data ?? []).findIndex((page) => page.id === pageId)
+          return at === -1 ? null : at
+        }}
+      />
     </div>
   )
 }

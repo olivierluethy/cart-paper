@@ -6,19 +6,19 @@ import type { Editor } from '@tiptap/react'
 import { PageView } from '@/features/reader/PageView'
 import { SelectionToolbar } from '@/features/reader/SelectionToolbar'
 import { NotesPanel } from '@/features/reader/NotesPanel'
+import { DiscussionPanel } from '@/features/reader/DiscussionPanel'
+import { MarginMarkers, type Marker } from '@/features/reader/MarginMarkers'
 import { NoteEditorModal } from '@/features/reader/NoteEditorModal'
-import { useAnnotationLayer } from '@/features/reader/useAnnotationLayer'
-import {
-  useHighlightActions,
-  useHighlights,
-  useNotes,
-} from '@/features/reader/useAnnotations'
+import { PassageCommentModal } from '@/features/reader/PassageCommentModal'
+import { useAnnotationLayer, type DiscussionMarker } from '@/features/reader/useAnnotationLayer'
+import { useHighlightActions, useHighlights, useNotes } from '@/features/reader/useAnnotations'
 import {
   useHeartbeat,
   useProgress,
   useReaderTypography,
   useSaveProgress,
 } from '@/features/reader/useReading'
+import { useAllComments } from '@/features/comments/useComments'
 import { SettingsModal } from '@/features/profile/SettingsModal'
 import { useAuthGate } from '@/features/auth/useAuthGate'
 import { IconButton } from '@/components/Button'
@@ -32,6 +32,7 @@ import { cn, prefersReducedMotion } from '@/lib/utils'
 import type { Highlight, HighlightColor, UUID } from '@/lib/types'
 
 const SWIPE_THRESHOLD = 56
+type PanelTab = 'marks' | 'discussion'
 
 export function ReaderPage() {
   const { slug = '' } = useParams()
@@ -48,6 +49,7 @@ export function ReaderPage() {
   const saveProgress = useSaveProgress(slug, invite)
   const highlights = useHighlights(slug, invite)
   const notes = useNotes(slug, invite)
+  const comments = useAllComments(slug, invite)
   const highlightActions = useHighlightActions(slug, invite)
 
   const list = useMemo(() => pages.data ?? [], [pages.data])
@@ -58,20 +60,37 @@ export function ReaderPage() {
   const [selection, setSelection] = useState<{ rect: DOMRect; from: number; to: number } | null>(null)
   const [activeId, setActiveId] = useState<string | null>(null)
   const [panelOpen, setPanelOpen] = useState(false)
+  const [tab, setTab] = useState<PanelTab>('marks')
   const [pendingScroll, setPendingScroll] = useState<string | null>(null)
+  const [markers, setMarkers] = useState<Marker[]>([])
 
   const resumeChecked = useRef(false)
+  const deepLinkDone = useRef(false)
   const surface = useRef<HTMLDivElement>(null)
   const touchStart = useRef<{ x: number; y: number } | null>(null)
 
   const page = list[index]
   const countPageTurn = useHeartbeat(slug, list.length > 0, invite)
 
+  const threads = comments.data ?? []
+  const discussions = useMemo<DiscussionMarker[]>(
+    () =>
+      threads
+        .filter((thread) => thread.root.anchor?.quote && thread.root.page_id)
+        .map((thread) => ({
+          id: thread.root.id,
+          anchor: thread.root.anchor!,
+          page_id: thread.root.page_id,
+          replies: thread.replies.length,
+        })),
+    [threads],
+  )
+
   const layer = useAnnotationLayer({
     editor,
     pageId: page?.id ?? null,
     highlights: highlights.data ?? [],
-    discussions: [],
+    discussions,
     activeId,
   })
 
@@ -86,10 +105,20 @@ export function ReaderPage() {
 
   // ---------------------------------------------------------------- navigation
   useEffect(() => {
+    if (deepLinkDone.current || !list.length) return
     const wanted = Number(params.get('p'))
-    if (Number.isFinite(wanted) && wanted > 0 && list.length) {
+    const thread = params.get('c')
+    if (Number.isFinite(wanted) && wanted > 0) {
       setIndex(Math.min(wanted - 1, list.length - 1))
       resumeChecked.current = true
+      deepLinkDone.current = true
+    }
+    if (thread) {
+      setActiveId(thread)
+      setTab('discussion')
+      setPendingScroll(thread)
+      resumeChecked.current = true
+      deepLinkDone.current = true
     }
   }, [params, list.length])
 
@@ -133,13 +162,11 @@ export function ReaderPage() {
     [pageIndexOf, index, goTo, layer],
   )
 
-  // Scrolling to an annotation on another page has to wait for that page to mount.
   useEffect(() => {
     if (!pendingScroll || !editor) return
     const timer = window.setTimeout(() => {
-      layer.scrollTo(pendingScroll)
-      setPendingScroll(null)
-    }, 60)
+      if (layer.scrollTo(pendingScroll)) setPendingScroll(null)
+    }, 80)
     return () => window.clearTimeout(timer)
   }, [pendingScroll, editor, layer])
 
@@ -176,6 +203,36 @@ export function ReaderPage() {
     return () => window.removeEventListener('keydown', onKey)
   }, [index, goTo, list.length, navigate, slug, selection])
 
+  // ------------------------------------------------------------ margin markers
+  useEffect(() => {
+    const container = surface.current
+    if (!container) return
+    const replyCounts = new Map(discussions.map((item) => [item.id, item.replies]))
+
+    const measure = () => {
+      const bounds = container.getBoundingClientRect()
+      const next: Marker[] = []
+      for (const item of layer.resolved) {
+        if (item.kind !== 'discussion') continue
+        const rect = layer.rectFor(item.id)
+        if (!rect) continue
+        next.push({
+          id: item.id,
+          replies: replyCounts.get(item.id) ?? 0,
+          top: rect.top - bounds.top + container.scrollTop,
+        })
+      }
+      setMarkers(next)
+    }
+
+    const frame = requestAnimationFrame(measure)
+    window.addEventListener('resize', measure)
+    return () => {
+      cancelAnimationFrame(frame)
+      window.removeEventListener('resize', measure)
+    }
+  }, [layer.resolved, layer.rectFor, discussions, index])
+
   // ----------------------------------------------------------------- selection
   const readSelection = useCallback(() => {
     if (!editor || editor.isDestroyed) return
@@ -203,7 +260,6 @@ export function ReaderPage() {
     return anchorFrom(editor, page.id, { from: selection.from, to: selection.to })
   }, [editor, selection, page])
 
-  /** A colour swatch recolours the highlight the selection already sits on. */
   const highlightUnderSelection = useMemo((): Highlight | null => {
     if (!selection) return null
     const hit = layer.resolved.find(
@@ -239,11 +295,34 @@ export function ReaderPage() {
       const anchor = currentAnchor
       const pageId = page.id
       clearSelection()
-      setPanelOpen(true)
       open(({ close }) => (
         <NoteEditorModal bookRef={slug} invite={invite} anchor={anchor} pageId={pageId} onDone={close} />
       ))
     }, 'Create an account to keep notes.')
+
+  const openCommentForSelection = () =>
+    void requireAuth(() => {
+      if (!currentAnchor || !page) return
+      const anchor = currentAnchor
+      const pageId = page.id
+      clearSelection()
+      setTab('discussion')
+      open(({ close }) => (
+        <PassageCommentModal
+          bookRef={slug}
+          invite={invite}
+          anchor={anchor}
+          pageId={pageId}
+          onDone={(created) => {
+            close()
+            if (created) {
+              setActiveId(created)
+              setPanelOpen(true)
+            }
+          }}
+        />
+      ))
+    }, 'Create an account to start a discussion on this passage.')
 
   const copySelection = async () => {
     if (!currentAnchor) return
@@ -260,7 +339,6 @@ export function ReaderPage() {
     clearSelection()
   }
 
-  // Clicking a painted annotation opens it in the panel.
   useEffect(() => {
     const node = editor?.view.dom
     if (!node) return
@@ -269,6 +347,7 @@ export function ReaderPage() {
       const id = target?.getAttribute('data-annotation-id')
       if (!id) return
       setActiveId(id)
+      setTab(target?.getAttribute('data-annotation-kind') === 'discussion' ? 'discussion' : 'marks')
       setPanelOpen(true)
     }
     node.addEventListener('click', onClick)
@@ -292,7 +371,6 @@ export function ReaderPage() {
   const reduced = prefersReducedMotion()
   const noteList = notes.data ?? []
   const highlightList = highlights.data ?? []
-  const markedCount = noteList.length + highlightList.length
 
   return (
     <ReaderShell
@@ -301,37 +379,51 @@ export function ReaderPage() {
       index={index}
       total={list.length}
       percent={percent}
-      markedCount={markedCount}
+      badge={noteList.length + highlightList.length + threads.length}
       panelOpen={panelOpen}
+      tab={tab}
+      onTab={setTab}
       onTogglePanel={() => setPanelOpen((value) => !value)}
       onSettings={() => open(({ close }) => <SettingsModal onDone={close} />)}
       panel={
-        <NotesPanel
-          notes={noteList}
-          highlights={highlightList}
-          pageIndexOf={pageIndexOf}
-          orphanIds={layer.orphanIds}
-          activeId={activeId}
-          onOpenNote={(note) =>
-            open(({ close }) => (
-              <NoteEditorModal bookRef={slug} invite={invite} note={note} onDone={close} />
-            ))
-          }
-          onGoTo={goToAnnotation}
-          onNewNoteFor={(highlight) =>
-            open(({ close }) => (
-              <NoteEditorModal
-                bookRef={slug}
-                invite={invite}
-                anchor={highlight.anchor}
-                pageId={highlight.page_id}
-                highlightId={highlight.id}
-                highlightColor={highlight.color}
-                onDone={close}
-              />
-            ))
-          }
-        />
+        tab === 'marks' ? (
+          <NotesPanel
+            notes={noteList}
+            highlights={highlightList}
+            pageIndexOf={pageIndexOf}
+            orphanIds={layer.orphanIds}
+            activeId={activeId}
+            onOpenNote={(note) =>
+              open(({ close }) => (
+                <NoteEditorModal bookRef={slug} invite={invite} note={note} onDone={close} />
+              ))
+            }
+            onGoTo={goToAnnotation}
+            onNewNoteFor={(highlight) =>
+              open(({ close }) => (
+                <NoteEditorModal
+                  bookRef={slug}
+                  invite={invite}
+                  anchor={highlight.anchor}
+                  pageId={highlight.page_id}
+                  highlightId={highlight.id}
+                  highlightColor={highlight.color}
+                  onDone={close}
+                />
+              ))
+            }
+          />
+        ) : (
+          <DiscussionPanel
+            bookRef={slug}
+            invite={invite}
+            threads={threads}
+            pageIndexOf={pageIndexOf}
+            orphanIds={layer.orphanIds}
+            activeId={activeId}
+            onGoTo={goToAnnotation}
+          />
+        )
       }
     >
       <div
@@ -358,14 +450,24 @@ export function ReaderPage() {
           aria-label="Previous page"
           onClick={() => goTo(index - 1, -1)}
           disabled={index === 0}
-          className="absolute inset-y-0 left-0 z-10 hidden w-[max(3rem,calc((100%-var(--reader-width))/2-3rem))] cursor-w-resize disabled:cursor-default lg:block"
+          className="absolute inset-y-0 left-0 z-10 hidden w-[max(3rem,calc((100%-var(--reader-width))/2-3.5rem))] cursor-w-resize disabled:cursor-default lg:block"
         />
         <button
           type="button"
           aria-label="Next page"
           onClick={() => goTo(index + 1, 1)}
           disabled={index >= list.length - 1}
-          className="absolute inset-y-0 right-0 z-10 hidden w-[max(3rem,calc((100%-var(--reader-width))/2-3rem))] cursor-e-resize disabled:cursor-default lg:block"
+          className="absolute inset-y-0 right-0 z-10 hidden w-[max(3rem,calc((100%-var(--reader-width))/2-3.5rem))] cursor-e-resize disabled:cursor-default lg:block"
+        />
+
+        <MarginMarkers
+          markers={markers}
+          activeId={activeId}
+          onOpen={(id) => {
+            setActiveId(id)
+            setTab('discussion')
+            setPanelOpen(true)
+          }}
         />
 
         <AnimatePresence mode="wait" initial={false}>
@@ -394,7 +496,7 @@ export function ReaderPage() {
             actions={{
               onHighlight: applyHighlight,
               onNote: openNoteForSelection,
-              onComment: () => toast.info('Passage discussions arrive with the next step.'),
+              onComment: openCommentForSelection,
               onCopy: () => void copySelection(),
               onQuote: () => void quoteSelection(),
             }}
@@ -456,8 +558,10 @@ function ReaderShell({
   index,
   total,
   percent,
-  markedCount,
+  badge,
   panelOpen,
+  tab,
+  onTab,
   onTogglePanel,
   onSettings,
   panel,
@@ -468,8 +572,10 @@ function ReaderShell({
   index: number
   total: number
   percent: number
-  markedCount: number
+  badge: number
   panelOpen: boolean
+  tab: PanelTab
+  onTab: (tab: PanelTab) => void
   onTogglePanel: () => void
   onSettings: () => void
   panel: React.ReactNode
@@ -480,7 +586,7 @@ function ReaderShell({
   return (
     <div style={style} className={cn('paper-grain relative flex h-dvh bg-ink-bg', className)}>
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 shrink-0 items-center gap-3 px-3 sm:px-5">
+        <header className="flex h-14 shrink-0 items-center gap-2 px-3 sm:px-5">
           <Link
             to={`/books/${slug}`}
             className="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-ink-muted transition-colors hover:text-ink-text"
@@ -498,13 +604,13 @@ function ReaderShell({
             <Settings2 size={17} />
           </IconButton>
           <IconButton
-            label={panelOpen ? 'Hide notes' : 'Show notes and highlights'}
+            label={panelOpen ? 'Hide the side panel' : 'Show notes and discussions'}
             active={panelOpen}
             onClick={onTogglePanel}
             className="relative"
           >
             <PanelRight size={17} />
-            {markedCount > 0 && !panelOpen && (
+            {badge > 0 && !panelOpen && (
               <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-amber" aria-hidden />
             )}
           </IconButton>
@@ -521,20 +627,33 @@ function ReaderShell({
       </div>
 
       <aside
-        aria-label="Notes and highlights"
+        aria-label="Notes and discussions"
         className={cn(
-          'z-40 w-[22rem] shrink-0 overflow-y-auto border-l border-ink-line bg-ink-surface/70 transition-transform duration-200 ease-paper',
-          'fixed inset-y-0 right-0 max-w-[85vw] lg:static lg:max-w-none',
+          'z-40 flex w-[23rem] shrink-0 flex-col border-l border-ink-line bg-ink-surface/70 transition-transform duration-200 ease-paper',
+          'fixed inset-y-0 right-0 max-w-[88vw] lg:static lg:max-w-none',
           panelOpen ? 'translate-x-0' : 'translate-x-full lg:hidden',
         )}
       >
-        <div className="flex h-14 items-center justify-between border-b border-ink-line px-4">
-          <span className="label">Your marks</span>
-          <IconButton label="Close panel" onClick={onTogglePanel}>
+        <div className="flex h-14 shrink-0 items-center gap-1 border-b border-ink-line px-2">
+          {(['marks', 'discussion'] as PanelTab[]).map((value) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => onTab(value)}
+              aria-current={tab === value}
+              className={cn(
+                'rounded-md px-3 py-1.5 text-xs capitalize transition-colors',
+                tab === value ? 'bg-ink-line/60 text-ink-text' : 'text-ink-muted hover:text-ink-text',
+              )}
+            >
+              {value === 'marks' ? 'Your marks' : 'Discussion'}
+            </button>
+          ))}
+          <IconButton label="Close panel" onClick={onTogglePanel} className="ml-auto">
             <X size={16} />
           </IconButton>
         </div>
-        {panel}
+        <div className="min-h-0 flex-1 overflow-y-auto">{panel}</div>
       </aside>
 
       {panelOpen && (
