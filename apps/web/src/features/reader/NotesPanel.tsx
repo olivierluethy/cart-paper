@@ -4,7 +4,7 @@ import { EmptyState } from '@/components/States'
 import { AttachmentRow } from '@/features/reader/NoteEditorModal'
 import { quoteExcerpt } from '@/lib/anchor'
 import { cn, timeAgo } from '@/lib/utils'
-import type { Highlight, HighlightColor, Note, UUID } from '@/lib/types'
+import type { Anchor, Highlight, HighlightColor, Note, UUID } from '@/lib/types'
 
 const DOT: Record<HighlightColor, string> = {
   yellow: 'bg-[rgb(214_176_74/0.8)]',
@@ -20,6 +20,8 @@ type Props = {
   notes: Note[]
   highlights: Highlight[]
   pageIndexOf: (pageId: UUID | null) => number | null
+  /** Overrides the page label — the PDF reader numbers by document page. */
+  pageLabelOf?: (anchor: Anchor | null | undefined) => string | null
   /** Ids whose passage no longer exists on its page — shown here, never inline. */
   orphanIds: Set<string>
   activeId: string | null
@@ -32,12 +34,18 @@ export function NotesPanel({
   notes,
   highlights,
   pageIndexOf,
+  pageLabelOf,
   orphanIds,
   activeId,
   onOpenNote,
   onGoTo,
   onNewNoteFor,
 }: Props) {
+  const label = (pageId: UUID | null, anchor: Anchor | null | undefined) => {
+    if (pageLabelOf) return pageLabelOf(anchor)
+    const index = pageIndexOf(pageId)
+    return index === null ? null : `Page ${index + 1}`
+  }
   const noteHighlightIds = new Set(notes.map((note) => note.highlight_id).filter(Boolean))
   const bare = highlights.filter((highlight) => !noteHighlightIds.has(highlight.id))
 
@@ -60,7 +68,7 @@ export function NotesPanel({
           <ul className="space-y-2.5">
             {notes.map((note) => {
               const orphaned = orphanIds.has(note.id)
-              const page = pageIndexOf(note.page_id)
+              const page = label(note.page_id, note.anchor)
               return (
                 <li key={note.id}>
                   <article
@@ -75,7 +83,7 @@ export function NotesPanel({
                       {note.highlight_color && (
                         <span className={cn('h-2 w-2 rounded-full', DOT[note.highlight_color])} aria-hidden />
                       )}
-                      {page !== null && <span>Page {page + 1}</span>}
+                      {page && <span>{page}</span>}
                       <span>·</span>
                       <span>{timeAgo(note.updated_at)}</span>
                       {orphaned && (
@@ -125,12 +133,12 @@ export function NotesPanel({
           <ul className="space-y-1.5">
             {bare.map((highlight) => {
               const orphaned = orphanIds.has(highlight.id)
-              const page = pageIndexOf(highlight.page_id)
+              const page = label(highlight.page_id, highlight.anchor)
               return (
                 <li key={highlight.id} className="group/hl rounded-md border border-ink-line p-2.5">
                   <div className="mb-1.5 flex items-center gap-2 text-2xs text-ink-faint">
                     <span className={cn('h-2 w-2 rounded-full', DOT[highlight.color])} aria-hidden />
-                    {page !== null && <span>Page {page + 1}</span>}
+                    {page && <span>{page}</span>}
                     {orphaned && (
                       <span className="ml-auto inline-flex items-center gap-1 text-amber/80">
                         <Unlink size={11} />

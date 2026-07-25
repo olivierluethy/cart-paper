@@ -226,6 +226,8 @@ export type ImportedDocumentRef = {
   source_type: 'pdf' | 'docx'
   conversion_status: 'pending' | 'processing' | 'converted' | 'low_confidence' | 'failed'
   original_url: string
+  conversion_report?: ConversionReport | null
+  book_id?: UUID | null
 }
 
 export type ConversionReport = {

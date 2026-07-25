@@ -301,6 +301,41 @@
   }
 }
 
+/* ---------------------------------------------------------------------------
+   pdf.js text layer — the invisible, selectable text drawn over the canvas.
+   Without it the fallback reader would be a picture of a book, and highlights
+   and anchored comments would be impossible.
+   --------------------------------------------------------------------------- */
+.textLayer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  line-height: 1;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  transform-origin: 0 0;
+  caret-color: transparent;
+  z-index: 2;
+}
+.textLayer span,
+.textLayer br {
+  position: absolute;
+  color: transparent;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0 0;
+}
+.textLayer ::selection {
+  background: rgb(var(--c-accent) / 0.35);
+}
+.textLayer .endOfContent {
+  position: absolute;
+  inset: 100% 0 0;
+  display: block;
+  cursor: default;
+  user-select: none;
+}
+
 /* ProseMirror chrome */
 .ProseMirror {
   outline: none;

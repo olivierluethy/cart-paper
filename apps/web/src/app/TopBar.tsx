@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { BookMarked, LogOut, PenLine, Settings, User as UserIcon } from 'lucide-react'
+import { BookMarked, LogOut, PenLine, Settings, Upload, User as UserIcon } from 'lucide-react'
 import { Wordmark } from '@/app/Wordmark'
 import { Avatar } from '@/components/Avatar'
 import { Button } from '@/components/Button'
@@ -9,6 +9,7 @@ import { useAuth } from '@/lib/auth'
 import { useAuthGate } from '@/features/auth/useAuthGate'
 import { useModal } from '@/lib/modal'
 import { SettingsModal } from '@/features/profile/SettingsModal'
+import { ImportModal } from '@/features/import/ImportModal'
 import { cn } from '@/lib/utils'
 
 const NAV = [
@@ -49,6 +50,15 @@ export function TopBar() {
 
         {user ? (
           <>
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={<Upload size={15} />}
+              className="hidden sm:inline-flex"
+              onClick={() => open(({ close }) => <ImportModal onDone={close} />)}
+            >
+              Import
+            </Button>
             <Button
               variant="primary"
               size="sm"
@@ -98,6 +108,15 @@ export function TopBar() {
                     }}
                   >
                     My shelf
+                  </MenuItem>
+                  <MenuItem
+                    icon={<Upload size={15} />}
+                    onClick={() => {
+                      close()
+                      open(({ close: done }) => <ImportModal onDone={done} />)
+                    }}
+                  >
+                    Import a document
                   </MenuItem>
                   <MenuItem
                     icon={<Settings size={15} />}

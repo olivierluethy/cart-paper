@@ -1,5 +1,5 @@
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { BookOpen, Heart, PenLine, Star, Users } from 'lucide-react'
+import { BookOpen, FileText, Heart, PenLine, Star, Users } from 'lucide-react'
 import { motion } from 'motion/react'
 import { BookCover } from '@/components/BookCover'
 import { Button } from '@/components/Button'
@@ -147,12 +147,33 @@ export function BookDetailPage() {
               url={`${window.location.origin}/books/${item.slug}`}
             />
 
+            {item.import_source && (
+              <Button
+                variant="ghost"
+                icon={<FileText size={15} />}
+                onClick={() => navigate(`/pdf/${item.slug}`)}
+              >
+                Read the original
+              </Button>
+            )}
+
             {item.can_edit && (
               <Button variant="ghost" icon={<PenLine size={15} />} onClick={() => navigate(`/write/${item.id}`)}>
                 Edit
               </Button>
             )}
           </div>
+
+          {item.import_source && item.import_source.conversion_status !== 'converted' && (
+            <p className="mt-5 flex max-w-prose items-start gap-2.5 rounded-md border border-amber/30 bg-amber/[0.06] px-4 py-3 text-xs leading-relaxed text-ink-muted">
+              <FileText size={14} className="mt-0.5 shrink-0 text-amber" />
+              <span>
+                This book was imported from <strong className="text-ink-text">{item.import_source.filename}</strong> and
+                the conversion was only partly successful. Reading the original file gives you the
+                same highlights, notes and passage-anchored discussions.
+              </span>
+            </p>
+          )}
 
           {item.progress && item.progress.percent > 0.01 && (
             <Link

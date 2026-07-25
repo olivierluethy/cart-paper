@@ -2,13 +2,14 @@ import { MessageSquareQuote, Unlink } from 'lucide-react'
 import { CommentThreadView } from '@/features/comments/CommentThreadView'
 import { EmptyState } from '@/components/States'
 import { cn } from '@/lib/utils'
-import type { CommentThread, UUID } from '@/lib/types'
+import type { Anchor, CommentThread, UUID } from '@/lib/types'
 
 export function DiscussionPanel({
   bookRef,
   invite,
   threads,
   pageIndexOf,
+  pageLabelOf,
   orphanIds,
   activeId,
   onGoTo,
@@ -17,6 +18,7 @@ export function DiscussionPanel({
   invite?: string | null
   threads: CommentThread[]
   pageIndexOf: (pageId: UUID | null) => number | null
+  pageLabelOf?: (anchor: Anchor | null | undefined) => string | null
   orphanIds: Set<string>
   activeId: string | null
   onGoTo: (pageId: UUID | null, id: string) => void
@@ -37,7 +39,12 @@ export function DiscussionPanel({
       {threads.map((thread) => {
         const anchored = Boolean(thread.root.anchor?.quote)
         const orphaned = orphanIds.has(thread.root.id)
-        const page = pageIndexOf(thread.root.page_id)
+        const page = pageLabelOf
+          ? pageLabelOf(thread.root.anchor)
+          : (() => {
+              const index = pageIndexOf(thread.root.page_id)
+              return index === null ? null : `Page ${index + 1}`
+            })()
         return (
           <li key={thread.root.id}>
             <div
@@ -50,7 +57,7 @@ export function DiscussionPanel({
                 {anchored ? (
                   <>
                     <MessageSquareQuote size={11} />
-                    {page !== null && <span>Page {page + 1}</span>}
+                    {page && <span>{page}</span>}
                     {!orphaned && (
                       <button
                         type="button"
