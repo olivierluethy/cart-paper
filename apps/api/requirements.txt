@@ -2,7 +2,7 @@
 # Mirrors [project.dependencies] in pyproject.toml; kept separate so Docker can
 # cache the install layer independently of the source tree.
 
-fastapi>=0.115,<0.120
+fastapi>=0.115,<1.0
 uvicorn[standard]>=0.32,<0.40
 sqlalchemy[asyncio]>=2.0.36,<2.1
 asyncpg>=0.30,<0.31

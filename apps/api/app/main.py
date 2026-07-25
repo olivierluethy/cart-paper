@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.core.config import settings
+from app.routers import auth
+
+logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 
 
 @asynccontextmanager
@@ -17,7 +22,9 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="CART Paper API",
     version="0.1.0",
-    description="Social reading and writing — books, passages, and the discussions anchored to them.",
+    description=(
+        "Social reading and writing — books, passages, and the discussions anchored to them."
+    ),
     lifespan=lifespan,
 )
 
@@ -30,7 +37,15 @@ app.add_middleware(
     expose_headers=["Content-Disposition"],
 )
 
+app.include_router(auth.router)
+
 
 @app.get("/health", tags=["meta"])
 async def health() -> dict[str, str]:
     return {"status": "ok", "service": "cart-paper-api"}
+
+
+@app.exception_handler(500)
+async def internal_error(request: Request, exc: Exception) -> JSONResponse:
+    logging.exception("unhandled error on %s %s", request.method, request.url.path)
+    return JSONResponse({"detail": "Something went wrong on our side."}, status_code=500)
