@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
-import { X } from 'lucide-react'
+import { Palette, X } from 'lucide-react'
 import { Field, TextArea } from '@/components/Field'
+import { Button } from '@/components/Button'
+import { BookCover } from '@/components/BookCover'
 import { useUpdateBook } from '@/lib/books'
 import { useAutosave } from '@/features/editor/useAutosave'
 import { SaveIndicator } from '@/features/editor/SaveIndicator'
+import { CoverDesigner } from '@/features/editor/CoverDesigner'
+import { useModal } from '@/lib/modal'
 import type { BookDetail, PageSummary } from '@/lib/types'
 
 type Props = {
@@ -14,6 +18,7 @@ type Props = {
 
 export function BookSettingsRail({ book, page, onPageTitle }: Props) {
   const update = useUpdateBook(book.id)
+  const { open } = useModal()
   const [draft, setDraft] = useState({
     title: book.title,
     subtitle: book.subtitle ?? '',
@@ -77,7 +82,24 @@ export function BookSettingsRail({ book, page, onPageTitle }: Props) {
         />
       </section>
 
-      <section className="space-y-2.5">
+      <section className="space-y-3 border-t border-ink-line pt-6">
+        <span className="label">Covers</span>
+        <div className="flex items-end gap-3">
+          <BookCover book={book} design={book.front_cover} size="sm" interactive={false} />
+          <BookCover book={book} design={book.back_cover} side="back" size="xs" interactive={false} />
+        </div>
+        <Button
+          variant="secondary"
+          size="sm"
+          block
+          icon={<Palette size={14} />}
+          onClick={() => open(({ close }) => <CoverDesigner book={book} onDone={close} />)}
+        >
+          Design covers
+        </Button>
+      </section>
+
+      <section className="space-y-2.5 border-t border-ink-line pt-6">
         <span className="label">Tags</span>
         <div className="flex flex-wrap gap-1.5">
           {book.tags.map((tag) => (
