@@ -3,6 +3,7 @@ import { Modal } from '@/components/Modal'
 import { Button } from '@/components/Button'
 import { Field, TextArea, Toggle } from '@/components/Field'
 import { AvatarSection } from '@/features/profile/AvatarSection'
+import { ConnectedAccounts } from '@/features/profile/ConnectedAccounts'
 import { useAuth, useReadingSettings } from '@/lib/auth'
 import { useToast } from '@/lib/toast'
 import { cn } from '@/lib/utils'
@@ -113,6 +114,7 @@ export function SettingsModal({ onDone }: { onDone: () => void }) {
             label="Show my reading statistics"
             description="Turn this off and every statistic disappears from your profile — reading time, sessions, pages turned, streaks."
           />
+          <ConnectedAccounts />
         </div>
       ) : (
         <div className="space-y-6">

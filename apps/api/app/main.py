@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.middleware.sessions import SessionMiddleware
 
 from app.core.config import settings
 from app.routers import (
@@ -19,6 +20,7 @@ from app.routers import (
     favorites,
     imports,
     notifications,
+    oauth,
     publishing,
     ratings,
     reading,
@@ -43,6 +45,17 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Authlib keeps the OAuth state and PKCE verifier in a signed session cookie
+# for the few seconds between the redirect out and the callback back.
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=settings.secret_key,
+    session_cookie="cp_oauth",
+    same_site="lax",
+    https_only=settings.cookie_secure,
+    max_age=600,
+)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins,
@@ -53,6 +66,7 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
+app.include_router(oauth.router)
 app.include_router(books.router)
 app.include_router(assets.router)
 app.include_router(publishing.router)

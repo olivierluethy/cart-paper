@@ -43,3 +43,8 @@ class ConversionStatus(str, enum.Enum):
     converted = "converted"
     low_confidence = "low_confidence"
     failed = "failed"
+
+
+class OAuthProvider(str, enum.Enum):
+    google = "google"
+    facebook = "facebook"

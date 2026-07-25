@@ -6,9 +6,11 @@ from app.models.enums import (
     ConversionStatus,
     HighlightColor,
     NotificationType,
+    OAuthProvider,
     SourceType,
 )
 from app.models.imports import ImportedDocument
+from app.models.oauth import OAuthAccount
 from app.models.notification import Notification
 from app.models.reading import ReadingProgress, ReadingSession
 from app.models.user import User
@@ -29,6 +31,8 @@ __all__ = [
     "NoteAttachment",
     "Notification",
     "NotificationType",
+    "OAuthAccount",
+    "OAuthProvider",
     "Page",
     "Rating",
     "ReadingProgress",

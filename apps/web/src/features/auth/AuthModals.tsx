@@ -7,6 +7,7 @@ import { PasswordField } from '@/components/PasswordField'
 import { PasswordStrength } from '@/features/auth/PasswordStrength'
 import { GeneratePasswordButton } from '@/features/auth/GeneratePassword'
 import { copyPasswordToClipboard, clearClipboardIfOurs } from '@/features/auth/passwords'
+import { SocialButtons } from '@/features/auth/SocialButtons'
 import { useAuth } from '@/lib/auth'
 import { useToast } from '@/lib/toast'
 import { ApiError, api } from '@/lib/api'
@@ -84,6 +85,9 @@ export function RegisterModal({ reason, onDone, onSwitch }: Props) {
         </div>
       }
     >
+      <div className="mb-5">
+        <SocialButtons action="Sign up" />
+      </div>
       <form id="register-form" onSubmit={submit} className="space-y-4">
         <Field
           label="Display name"
@@ -181,6 +185,9 @@ export function LoginModal({ reason, onDone, onSwitch }: Props) {
         </div>
       }
     >
+      <div className="mb-5">
+        <SocialButtons action="Sign in" />
+      </div>
       <form id="login-form" onSubmit={submit} className="space-y-4">
         <Field
           label="Email"

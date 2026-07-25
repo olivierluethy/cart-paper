@@ -71,7 +71,9 @@ async def register(payload: RegisterIn, response: Response, db: DbSession) -> Us
 async def login(payload: LoginIn, response: Response, db: DbSession) -> User:
     email = payload.email.strip().lower()
     user = await db.scalar(select(User).where(func.lower(User.email) == email))
-    if user is None or not verify_password(payload.password, user.password_hash):
+    # An OAuth-only account has no password_hash at all; it must fail the same
+    # way a wrong password does, not blow up.
+    if user is None or not user.password_hash or not verify_password(payload.password, user.password_hash):
         # Same message either way — do not leak which emails exist.
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "That email and password do not match.")
     if needs_rehash(user.password_hash):

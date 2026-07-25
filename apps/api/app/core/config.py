@@ -28,6 +28,14 @@ class Settings(BaseSettings):
 
     max_upload_mb: int = 40
 
+    # OAuth — empty by default. A provider with no credentials is reported as
+    # unconfigured and its endpoints answer 501 rather than half-working.
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    facebook_app_id: str = ""
+    facebook_app_secret: str = ""
+    oauth_redirect_base_url: str = ""
+
     @property
     def allowed_origins(self) -> list[str]:
         return [item.strip() for item in self.cors_origins.split(",") if item.strip()]
