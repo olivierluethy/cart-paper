@@ -34,7 +34,7 @@ npm run seed
 
 That creates three demo users and four published books with real multi-page content, images,
 highlights and a couple of anchored discussion threads. Every seeded account uses the password
-`readwrite123`; sign in as `mira@cartpaper.test` to see a populated profile.
+`readwrite123`; sign in as `mira@cartpaper.example` to see a populated profile.
 
 ### Prerequisites
 

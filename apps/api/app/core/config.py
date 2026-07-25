@@ -1,7 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -15,7 +14,10 @@ class Settings(BaseSettings):
     access_token_minutes: int = 15
     refresh_token_days: int = 30
 
-    cors_origins: list[str] = ["http://localhost:5173"]
+    # Deliberately a plain string: pydantic-settings JSON-decodes list-typed
+    # fields directly in the environment source, before any validator can run,
+    # so a comma-separated CORS_ORIGINS would raise instead of being parsed.
+    cors_origins: str = "http://localhost:5173"
 
     upload_dir: Path = Path("/data/uploads")
     public_api_url: str = "http://localhost:8000"
@@ -26,12 +28,9 @@ class Settings(BaseSettings):
 
     max_upload_mb: int = 40
 
-    @field_validator("cors_origins", mode="before")
-    @classmethod
-    def _split_origins(cls, value: object) -> object:
-        if isinstance(value, str):
-            return [item.strip() for item in value.split(",") if item.strip()]
-        return value
+    @property
+    def allowed_origins(self) -> list[str]:
+        return [item.strip() for item in self.cors_origins.split(",") if item.strip()]
 
     @property
     def is_dev(self) -> bool:

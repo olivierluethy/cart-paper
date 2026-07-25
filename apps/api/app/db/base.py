@@ -15,7 +15,15 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
 class Base(DeclarativeBase):
-    pass
+    # Fetch server-generated values (created_at, and especially the
+    # onupdate=now() on updated_at) with RETURNING, in the same statement.
+    #
+    # Without this, SQLAlchemy expires updated_at after an UPDATE and reloads it
+    # lazily on first access — which, under asyncio, means IO outside the
+    # greenlet and a MissingGreenlet error the moment the response is
+    # serialised. That is the autosave path: every PATCH of a page, a book or a
+    # note. RETURNING costs nothing extra on PostgreSQL.
+    __mapper_args__ = {"eager_defaults": True}
 
 
 def uuid_pk() -> Mapped[uuid.UUID]:

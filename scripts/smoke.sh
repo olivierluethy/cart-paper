@@ -30,7 +30,7 @@ check "web dev server responds"        bash -c "curl -fsS $WEB | grep -qi 'cart 
 
 # One authenticated round-trip: register -> /auth/me -> create a draft.
 jar="$(mktemp)"
-email="smoke-$(date +%s)@cartpaper.test"
+email="smoke-$(date +%s)@cartpaper.example"
 check "POST /auth/register logs in" bash -c \
   "curl -fsS -c $jar -H 'Content-Type: application/json' \
    -d '{\"email\":\"$email\",\"password\":\"smoke-password-123\",\"display_name\":\"Smoke\"}' \

@@ -14,7 +14,6 @@ from sqlalchemy import (
     SmallInteger,
     String,
     Text,
-    UniqueConstraint,
     func,
 )
 from sqlalchemy.dialects.postgresql import JSONB
@@ -170,7 +169,7 @@ class Rating(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
 
-    __table_args__ = (
-        CheckConstraint("value >= 1 AND value <= 5", name="ck_ratings_value_range"),
-        UniqueConstraint("user_id", "book_id", name="uq_ratings_user_book"),
-    )
+    # The composite primary key already enforces one rating per user per book;
+    # a separate unique constraint on the same columns is redundant, and
+    # Postgres silently folds it into the PK.
+    __table_args__ = (CheckConstraint("value >= 1 AND value <= 5", name="ck_ratings_value_range"),)

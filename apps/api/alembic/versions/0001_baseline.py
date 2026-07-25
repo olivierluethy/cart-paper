@@ -153,7 +153,6 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["book_id"], ["books.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("user_id", "book_id"),
-        sa.UniqueConstraint("user_id", "book_id", name="uq_ratings_user_book"),
     )
 
     # ------------------------------------------------------------- comments

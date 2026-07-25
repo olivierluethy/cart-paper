@@ -47,19 +47,19 @@ PASSWORD = "readwrite123"
 
 READERS = [
     {
-        "email": "mira@cartpaper.test",
+        "email": "mira@cartpaper.example",
         "handle": "mira",
         "display_name": "Mira Halloway",
         "bio": "Walks at night, writes it down in the morning. Two books here, both arguments.",
     },
     {
-        "email": "tomas@cartpaper.test",
+        "email": "tomas@cartpaper.example",
         "handle": "tomas",
         "display_name": "Tomas Ek",
         "bio": "Reads with a pencil. Believes the margin is the best part of any book.",
     },
     {
-        "email": "odile@cartpaper.test",
+        "email": "odile@cartpaper.example",
         "handle": "odile",
         "display_name": "Odile Renard",
         "bio": "Four years on a coast that was leaving. Now inland, still counting.",
@@ -463,7 +463,7 @@ async def seed() -> None:
 
         await db.commit()
         print("[seed] ratings, favourites, progress and a fortnight of reading sessions")
-        print("\n[seed] done. Sign in as mira@cartpaper.test / " + PASSWORD)
+        print("\n[seed] done. Sign in as mira@cartpaper.example / " + PASSWORD)
 
 
 def main() -> None:
