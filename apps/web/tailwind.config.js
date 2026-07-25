@@ -1,3 +1,5 @@
+import plugin from 'tailwindcss/plugin'
+
 /** @type {import('tailwindcss').Config} */
 export default {
   // Dark mode only: there is no light theme, no toggle, no `light:` variants.
@@ -70,5 +72,12 @@ export default {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    // `can-hover:` applies only on devices that actually have a hover state.
+    // Anything revealed on hover must be permanently visible everywhere else,
+    // because on touch there is no hover to reveal it with.
+    plugin(({ addVariant }) => {
+      addVariant('can-hover', '@media (hover: hover) and (pointer: fine)')
+    }),
+  ],
 }

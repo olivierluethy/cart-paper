@@ -106,7 +106,7 @@ export function PageRail({
               >
                 <GripVertical
                   size={14}
-                  className="mt-0.5 shrink-0 cursor-grab text-ink-faint opacity-0 transition-opacity group-hover:opacity-100"
+                  className="mt-0.5 shrink-0 cursor-grab text-ink-faint transition-opacity can-hover:opacity-0 can-hover:group-hover:opacity-100"
                   aria-hidden
                 />
                 <span className="w-5 shrink-0 pt-px text-right font-mono text-2xs text-ink-faint">
@@ -122,7 +122,7 @@ export function PageRail({
                 </span>
               </button>
 
-              <div className="absolute right-1.5 top-1.5 flex gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+              <div className="absolute right-1.5 top-1.5 flex gap-0.5 transition-opacity can-hover:opacity-0 can-hover:focus-within:opacity-100 can-hover:group-hover:opacity-100">
                 <IconButton
                   label={`Duplicate page ${index + 1}`}
                   className="h-7 w-7"

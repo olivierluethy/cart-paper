@@ -63,7 +63,7 @@ Two consequences worth stating plainly:
 
 ## Data model
 
-Fifteen tables (`apps/api/app/models/`). Enums are stored as `VARCHAR` + `CHECK`
+Sixteen tables (`apps/api/app/models/`). Enums are stored as `VARCHAR` + `CHECK`
 (`native_enum=False`) so adding a value later is an ordinary `ALTER`.
 
 | Table | Notes |
@@ -78,10 +78,11 @@ Fifteen tables (`apps/api/app/models/`). Enums are stored as `VARCHAR` + `CHECK`
 | `highlights` | Per user per book; seven colours. |
 | `notes` | Rich text (jsonb), optionally hung off a highlight. |
 | `note_attachments` | `link` · `image` · `quote` · `file`. |
-| `reading_progress` | One row per user per book; the resume point. |
+| `reading_progress` | One row per user per book: the resume point, plus `completed_at` and `restarted_count`. |
 | `reading_sessions` | Written by the 15s heartbeat; the source of every statistic. |
 | `notifications` | `comment_reply` · `book_comment` · `book_rating` · `invite_accepted`. |
 | `imported_documents` | Keeps the original file forever plus a conversion report. |
+| `oauth_accounts` | One row per (provider, account); unique on that pair. `users.password_hash` is nullable because of it. |
 
 ---
 
@@ -96,13 +97,15 @@ Everything is on the API host (`http://localhost:8000`); full schema at `/docs`.
 | Pages | `GET /books/{ref}/pages`, `/pages/full`, `POST /books/{ref}/pages`, `/pages/reorder`, `/pages/{id}/duplicate`, `GET|PATCH|DELETE /books/{ref}/pages/{id}` |
 | Assets | `POST|GET /books/{ref}/assets`, `DELETE /assets/{id}`, `GET /media/{key}` |
 | Publishing | `POST /books/{ref}/publish` · `/unpublish`, `GET|POST /books/{ref}/invites`, `DELETE /invites/{id}`, `POST /invites/{token}/accept` |
-| Reading | `GET|PUT /books/{ref}/progress`, `POST /books/{ref}/heartbeat`, `GET /reading/continue` |
+| Reading | `GET|PATCH /books/{ref}/progress` (PUT alias), `POST /books/{ref}/progress/restart`, `POST /books/{ref}/heartbeat`, `GET /reading/continue` |
 | Annotations | `GET|POST /books/{ref}/highlights`, `PATCH|DELETE /highlights/{id}`, `GET|POST /books/{ref}/notes`, `PATCH|DELETE /notes/{id}`, `POST /notes/{id}/attachments[/file]`, `DELETE /note-attachments/{id}` |
 | Discussion | `GET|POST /books/{ref}/comments` (`scope=all\|book\|page`), `GET /comments/{id}/thread`, `PATCH|DELETE /comments/{id}` |
 | Ratings | `GET|PUT|DELETE /books/{ref}/rating` |
 | Favourites | `POST|DELETE /books/{ref}/favorite`, `GET /favorites` |
 | Notifications | `GET /notifications`, `/unread-count`, `POST /notifications/read`, `/{id}/read` |
 | Profile | `GET /users/{handle}`, `/comments`, `/stats`, `GET /users/me/trail` |
+| Avatar | `POST /me/avatar` (upload), `/me/avatar/url`, `/me/avatar/preview`, `DELETE /me/avatar` |
+| Social sign-in | `GET /auth/providers`, `/auth/oauth/{provider}/start`, `/callback`, `GET /auth/linked`, `DELETE /auth/linked/{id}` |
 | Import | `POST /imports`, `GET /imports`, `GET /imports/{id}` |
 | Export | `GET /books/{ref}/export.pdf?marks=` |
 
@@ -111,6 +114,95 @@ anyone without the author's session or a valid invite token — an unlisted draf
 discoverable. Invite tokens travel as `?invite=` or `X-Cart-Invite`.
 
 ---
+
+## Progress and completion
+
+`reading_progress` carries `page_id`, `percent`, `completed_at` and `restarted_count`.
+
+* **The stored position is a high-water mark.** Writes are monotonic on the server: paging
+  backwards, clicking past the last page or reloading can never lower it, and nothing clears
+  `completed_at`. Without that, flicking back to re-read chapter one would lose your place.
+* **Completion is confirmed, not inferred.** The reader sends `completed: true` when the last page
+  is actually reached; a percentage that rounding nudged over the line is not enough on its own
+  (though `>= 0.999` is also accepted as a fallback).
+* **A finished book stays finished.** `POST /books/{id}/progress/restart` resets the position and
+  increments `restarted_count`, but deliberately keeps `completed_at` — and every highlight, note
+  and discussion.
+* Client-side, writes are clamped to `[0, pageCount-1]`, deduplicated against the last payload,
+  debounced to at most one every 2s, and flushed on unmount, `visibilitychange` and `pagehide`.
+
+## Annotation privacy
+
+Two kinds of annotation, and a reader should never have to work out which is which:
+
+| | Private note | Public discussion |
+|---|---|---|
+| Stored in | `highlights` + `notes` | `comments` |
+| Visible to | only its author — the API filters by `user_id` | everyone who can read the book |
+| Icon | pencil / lock | speech bubble |
+| Accent | amber | teal |
+| Margin | left | right |
+| Label | "Private note · only you" | "Public discussion · everyone can see this" |
+
+That vocabulary lives in one module (`features/reader/privacy.tsx`) and is reused by the selection
+toolbar, the margin markers, the panel tabs, both composers, the reader chrome and the profile
+views. Highlights are never shared, and a PDF export contains only the caller's own marks.
+
+Margin markers are permanent rather than hover-revealed: hover does not exist on touch, and "there
+is a note here" is information, not a control. Anything that *is* hover-revealed elsewhere uses the
+`can-hover:` Tailwind variant (`@media (hover: hover) and (pointer: fine)`) so it stays visible
+where hovering is impossible.
+
+## OAuth
+
+`oauth_accounts` holds one row per `(provider, provider_account_id)` pair, unique on that pair, so a
+single user can carry several identities. `users.password_hash` is nullable — an OAuth-only account
+has no password — and every path that assumed one exists is guarded.
+
+* `GET /auth/providers` — what is configured. The modals call this before rendering, so a button
+  that cannot work is never shown as if it could.
+* `GET /auth/oauth/{provider}/start` — 302 to consent when configured, **501
+  `provider_not_configured`** when not.
+* `GET /auth/oauth/{provider}/callback` — exchanges the code, upserts the user, and issues *exactly*
+  the same httpOnly cookie session a password login does, so nothing downstream can tell the
+  difference.
+
+**Linking** follows a provider email only when the provider says it is verified. An unverified
+address would let anyone who can type your email into a provider account walk into your library, so
+those get a separate account instead. Disconnecting is refused when it is the account's only
+remaining way to sign in.
+
+### Activating a provider
+
+No code changes are needed; this is configuration only.
+
+**Google** — Google Cloud Console → APIs & Services → Credentials → *Create OAuth client ID* → Web
+application. Authorised redirect URI `http://localhost:8000/auth/oauth/google/callback` (or your
+`OAUTH_REDIRECT_BASE_URL` + `/auth/oauth/google/callback`). Fill in `GOOGLE_CLIENT_ID` and
+`GOOGLE_CLIENT_SECRET`.
+
+**Facebook** — developers.facebook.com → My Apps → Create App → add **Facebook Login**. Valid OAuth
+Redirect URI `http://localhost:8000/auth/oauth/facebook/callback`. Fill in `FACEBOOK_APP_ID` and
+`FACEBOOK_APP_SECRET`.
+
+Restart the API. Authlib keeps the OAuth state and PKCE verifier in a short-lived signed session
+cookie (`cp_oauth`, 10 minutes), signed with `SECRET_KEY`.
+
+## Passwords and avatars
+
+**Passwords.** The browser scores with zxcvbn-ts and shows a verdict, a crack time against offline
+slow hashing and one suggestion — but that is advice. The server is authoritative and enforces only
+what is not a matter of opinion: a 10-character minimum and rejection against a bundled list of
+40k already-cracked passwords. A low zxcvbn score never blocks registration, because refusing
+somebody's genuinely random passphrase is worse than letting it through. The generator uses
+`crypto.getRandomValues` with rejection sampling (never modulo bias) and a bundled 4096-word list,
+so the entropy figure it displays is real.
+
+**Avatars.** Remote images are downloaded, cropped and re-hosted as 512×512 WebP — never hotlinked,
+because a third-party host could otherwise break every avatar on the page and would see each
+viewer's IP. Fetching a user-supplied URL from the server is SSRF, so the host is resolved before
+the request and anything loopback, private, link-local, reserved or multicast is refused, on every
+redirect hop.
 
 ## Decisions taken while building
 
@@ -146,6 +238,8 @@ Explicitly out of scope for v1 per the brief, listed here rather than left as de
 - Full-text search across book bodies — title, subtitle, description and author search is
   implemented
 - Social graph (following users)
+- Real social sign-in **credentials** — the entire Google/Facebook flow, table and UI are built and
+  tested; only the client id/secret are absent, and filling them in is the whole activation
 
 Deferred by choice while building:
 

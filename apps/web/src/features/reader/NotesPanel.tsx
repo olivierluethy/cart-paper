@@ -163,7 +163,7 @@ export function NotesPanel({
                   <button
                     type="button"
                     onClick={() => onNewNoteFor(highlight)}
-                    className="mt-2 inline-flex items-center gap-1.5 text-2xs text-ink-faint opacity-0 transition-opacity hover:text-amber focus:opacity-100 group-hover/hl:opacity-100"
+                    className="mt-2 inline-flex items-center gap-1.5 text-2xs text-ink-faint transition-opacity hover:text-amber focus:opacity-100 can-hover:opacity-0 can-hover:group-hover/hl:opacity-100"
                   >
                     <Highlighter size={11} />
                     Add a note to this
