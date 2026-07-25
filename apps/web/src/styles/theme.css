@@ -1,0 +1,74 @@
+/* ---------------------------------------------------------------------------
+   CART Paper — "private library at night"
+   Dark mode only. All colour lives here as `R G B` triplets so Tailwind can
+   apply opacity modifiers (`bg-ink-surface/60`).
+   --------------------------------------------------------------------------- */
+
+:root {
+  --c-bg: 15 14 12; /* #0F0E0C */
+  --c-surface: 23 22 19; /* #171613 */
+  --c-raised: 30 28 24; /* #1E1C18 */
+  --c-line: 42 39 35; /* #2A2723 */
+  --c-text: 237 231 220; /* #EDE7DC */
+  --c-muted: 154 145 136; /* #9A9188 */
+  --c-faint: 106 99 92; /* dimmer than muted, for metadata */
+  --c-accent: 217 160 91; /* #D9A05B */
+  --c-accent-soft: 240 205 156;
+  --c-accent-deep: 154 106 51;
+  --c-teal: 78 124 122; /* #4E7C7A */
+  --c-teal-soft: 128 172 170;
+  --c-danger: 197 96 84;
+  --c-success: 125 158 106;
+
+  /* Highlight overlays — translucent inks tuned for a dark ground, not neon. */
+  --hl-yellow: 214 176 74;
+  --hl-green: 118 163 106;
+  --hl-blue: 98 141 192;
+  --hl-pink: 199 118 154;
+  --hl-red: 197 96 84;
+  --hl-purple: 148 118 196;
+  --hl-black: 120 115 108;
+
+  /* Reader preferences, overwritten at runtime from user settings. */
+  --reader-size: 1.125rem;
+  --reader-leading: 1.75;
+  --reader-width: 34rem;
+
+  color-scheme: dark;
+}
+
+/* Paper grain: a single tiled SVG noise, cheap and non-repeating to the eye. */
+.paper-grain::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.035;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Warm vignette used by the reader shell. */
+.vignette::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at 50% 38%,
+    transparent 42%,
+    rgb(0 0 0 / 0.28) 78%,
+    rgb(0 0 0 / 0.5) 100%
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

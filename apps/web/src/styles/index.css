@@ -1,0 +1,267 @@
+@import './theme.css';
+
+/* Self-hosted faces. Fraunces for display, Literata for reading, Plex for UI. */
+@import '@fontsource-variable/fraunces/index.css';
+@import '@fontsource-variable/literata/index.css';
+@import '@fontsource/ibm-plex-sans/400.css';
+@import '@fontsource/ibm-plex-sans/500.css';
+@import '@fontsource/ibm-plex-sans/600.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-ink-bg font-ui text-ink-text antialiased;
+    font-feature-settings: 'kern' 1, 'liga' 1;
+    min-height: 100dvh;
+    overscroll-behavior-y: none;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display;
+    font-variation-settings: 'SOFT' 12, 'WONK' 1;
+  }
+
+  ::selection {
+    background: rgb(var(--c-accent) / 0.28);
+    color: rgb(var(--c-text));
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-amber/70 ring-offset-2 ring-offset-ink-bg;
+  }
+
+  /* Scrollbars that belong in a dark room. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--c-line)) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background-color: rgb(var(--c-line));
+    border-radius: 999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+@layer components {
+  /* ---- shared surfaces ---------------------------------------------- */
+  .surface {
+    @apply border border-ink-line bg-ink-surface;
+  }
+  .surface-raised {
+    @apply border border-ink-line bg-ink-raised shadow-panel;
+  }
+  .hairline {
+    @apply border-ink-line;
+  }
+
+  /* ---- book prose (reader + editor share this) ----------------------- */
+  .cart-prose {
+    @apply font-read text-ink-text;
+    font-size: var(--reader-size);
+    line-height: var(--reader-leading);
+    hanging-punctuation: first last;
+  }
+  .cart-prose > * + * {
+    margin-top: 1.1em;
+  }
+  .cart-prose h1 {
+    @apply mb-2 mt-10 font-display text-[1.9em] font-semibold leading-tight;
+  }
+  .cart-prose h2 {
+    @apply mb-1 mt-9 font-display text-[1.5em] font-semibold leading-tight;
+  }
+  .cart-prose h3 {
+    @apply mb-1 mt-7 font-display text-[1.25em] font-semibold leading-snug;
+  }
+  .cart-prose h4 {
+    @apply mb-1 mt-6 font-display text-[1.08em] font-semibold leading-snug;
+  }
+  .cart-prose p {
+    text-wrap: pretty;
+  }
+  .cart-prose a {
+    @apply text-amber underline decoration-amber/40 underline-offset-2 transition-colors hover:decoration-amber;
+  }
+  .cart-prose strong {
+    @apply font-semibold text-ink-text;
+  }
+  .cart-prose em {
+    font-style: italic;
+  }
+  .cart-prose blockquote {
+    @apply border-l-2 border-amber/50 pl-5 italic text-ink-text/90;
+  }
+  .cart-prose ul {
+    @apply list-disc pl-6;
+  }
+  .cart-prose ol {
+    @apply list-decimal pl-6;
+  }
+  .cart-prose li + li {
+    margin-top: 0.35em;
+  }
+  .cart-prose li > p {
+    margin: 0;
+  }
+  .cart-prose code {
+    @apply rounded-xs bg-ink-raised px-1.5 py-0.5 font-mono text-[0.86em] text-amber-soft;
+  }
+  .cart-prose pre {
+    @apply overflow-x-auto rounded-md border border-ink-line bg-ink-raised p-4 font-mono text-[0.85em] leading-relaxed;
+  }
+  .cart-prose pre code {
+    @apply bg-transparent p-0 text-ink-text;
+  }
+  .cart-prose hr {
+    @apply my-10 border-0 text-center text-ink-faint;
+  }
+  .cart-prose hr::before {
+    content: '❦';
+    font-size: 1rem;
+  }
+  .cart-prose img {
+    @apply rounded-sm;
+  }
+
+  /* checklists */
+  .cart-prose ul[data-type='taskList'] {
+    @apply list-none pl-0;
+  }
+  .cart-prose ul[data-type='taskList'] li {
+    @apply flex items-start gap-2.5;
+  }
+  .cart-prose ul[data-type='taskList'] li > label {
+    @apply mt-[0.35em] shrink-0;
+  }
+  .cart-prose input[type='checkbox'] {
+    @apply h-4 w-4 shrink-0 accent-amber;
+  }
+
+  /* block styles introduced by the editor */
+  .cart-prose [data-block='callout'] {
+    @apply rounded-md border border-amber/25 bg-amber/[0.07] px-5 py-4 not-italic;
+  }
+  .cart-prose [data-block='epigraph'] {
+    @apply mx-auto max-w-[30ch] text-center font-display text-[0.95em] italic text-ink-muted;
+  }
+  .cart-prose [data-block='verse'] {
+    @apply whitespace-pre-wrap pl-6 font-read italic leading-[1.9];
+  }
+
+  /* font-size scale marks */
+  .cart-prose [data-scale='s'] {
+    font-size: 0.86em;
+  }
+  .cart-prose [data-scale='l'] {
+    font-size: 1.2em;
+  }
+
+  /* ---- highlights ---------------------------------------------------- */
+  .cart-highlight {
+    @apply cursor-pointer rounded-[2px] transition-colors;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+    padding: 0.06em 0.06em;
+  }
+  .cart-highlight[data-color='yellow'] {
+    background: rgb(var(--hl-yellow) / 0.26);
+    box-shadow: inset 0 -0.5em 0 rgb(var(--hl-yellow) / 0.1);
+  }
+  .cart-highlight[data-color='green'] {
+    background: rgb(var(--hl-green) / 0.26);
+  }
+  .cart-highlight[data-color='blue'] {
+    background: rgb(var(--hl-blue) / 0.28);
+  }
+  .cart-highlight[data-color='pink'] {
+    background: rgb(var(--hl-pink) / 0.26);
+  }
+  .cart-highlight[data-color='red'] {
+    background: rgb(var(--hl-red) / 0.26);
+  }
+  .cart-highlight[data-color='purple'] {
+    background: rgb(var(--hl-purple) / 0.28);
+  }
+  .cart-highlight[data-color='black'] {
+    background: rgb(var(--hl-black) / 0.34);
+  }
+  .cart-highlight[data-active='true'] {
+    box-shadow: 0 0 0 2px rgb(var(--c-accent) / 0.55);
+  }
+
+  /* passage with an anchored discussion */
+  .cart-anchor {
+    @apply cursor-pointer;
+    border-bottom: 2px dotted rgb(var(--c-teal) / 0.85);
+  }
+  .cart-anchor[data-active='true'] {
+    background: rgb(var(--c-teal) / 0.18);
+  }
+
+  /* ---- small primitives --------------------------------------------- */
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-ink-line px-3 py-1 text-xs text-ink-muted transition-colors;
+  }
+  .chip[data-active='true'] {
+    @apply border-amber/50 bg-amber/10 text-amber-soft;
+  }
+  .label {
+    @apply text-2xs font-medium uppercase tracking-[0.14em] text-ink-faint;
+  }
+  .field {
+    @apply w-full rounded-md border border-ink-line bg-ink-bg px-3 py-2 text-sm text-ink-text placeholder:text-ink-faint focus:border-amber/60 focus:outline-none focus:ring-0;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* ProseMirror chrome */
+.ProseMirror {
+  outline: none;
+  min-height: 12rem;
+}
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: rgb(var(--c-faint));
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+.ProseMirror-selectednode {
+  outline: 2px solid rgb(var(--c-accent) / 0.7);
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+.ProseMirror .cart-figure {
+  margin: 1.6em 0;
+}

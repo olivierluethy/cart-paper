@@ -1,0 +1,26 @@
+[project]
+name = "cart-paper-api"
+version = "0.1.0"
+description = "CART Paper API — social reading and writing platform"
+requires-python = ">=3.12"
+# The authoritative install manifest is requirements.txt (used by the Dockerfile
+# so the dependency layer caches independently of the source tree).
+dynamic = ["dependencies"]
+
+[tool.setuptools.dynamic]
+dependencies = { file = ["requirements.txt"] }
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["B008"]

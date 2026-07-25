@@ -1,0 +1,21 @@
+{
+  "name": "cart-paper",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CART Paper — a social reading and writing platform with passage-anchored discussion.",
+  "scripts": {
+    "setup": "cp -n .env.example .env || true && docker compose build",
+    "dev": "docker compose up",
+    "dev:detached": "docker compose up -d",
+    "stop": "docker compose down",
+    "reset": "docker compose down -v && npm run setup",
+    "logs": "docker compose logs -f",
+    "migrate": "docker compose exec api alembic upgrade head",
+    "makemigration": "docker compose exec api alembic revision --autogenerate -m",
+    "seed": "docker compose exec api python -m app.db.seed",
+    "build": "docker compose -f docker-compose.yml build",
+    "shell:api": "docker compose exec api bash",
+    "shell:db": "docker compose exec db psql -U cart -d cartpaper",
+    "smoke": "bash scripts/smoke.sh"
+  }
+}
