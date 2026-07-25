@@ -6,7 +6,7 @@ import { Loading, ErrorState } from '@/components/States'
 import { PageRail } from '@/features/editor/PageRail'
 import { BookSettingsRail } from '@/features/editor/BookSettingsRail'
 import { SaveIndicator } from '@/features/editor/SaveIndicator'
-import { PlainPageEditor } from '@/features/editor/PlainPageEditor'
+import { PageEditor } from '@/features/editor/PageEditor'
 import { useAutosave } from '@/features/editor/useAutosave'
 import {
   useBook,
@@ -172,11 +172,11 @@ export function WorkspacePage() {
 
         {/* editor */}
         <section className="min-h-0 overflow-y-auto">
-          <div className="mx-auto max-w-prose px-5 py-10 sm:px-8 sm:py-14">
+          <div className="mx-auto max-w-prose px-5 pb-24 sm:px-8">
             {active.isLoading || !active.data ? (
               <Loading label="Loading page…" />
             ) : (
-              <PlainPageEditor
+              <PageEditor
                 pageKey={active.data.id}
                 doc={active.data.content}
                 onChange={(doc) => autosave.schedule({ content: doc })}
