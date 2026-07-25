@@ -86,6 +86,22 @@ All variables live in `.env` (created from `.env.example`).
 
 ---
 
+## Routes
+
+| Route | What it is |
+|---|---|
+| `/` | The public library — search, sort, tag chips, continue reading, favourites |
+| `/books/:slug` | Book detail: cover, rating, whole-book comments and every anchored discussion |
+| `/read/:slug` | The reader. Select a passage to highlight, note or discuss it |
+| `/pdf/:slug` | Fallback reader for imports, over the original file — annotations work here too |
+| `/books/:slug/print` | Print view, with an option to append your own highlights and notes |
+| `/write` · `/write/:id` | The three-pane writing workspace |
+| `/me` · `/u/:handle` | Profile — books, trail, currently reading, favourites, drafts, statistics |
+| `/notifications` | Everything that happened to your books and comments |
+
+Keyboard in the reader: `←` `→` (or `space`, `PageUp`/`PageDown`) to turn pages, `Home`/`End` to
+jump, `Esc` to leave. In the editor, `⌘/Ctrl+S` forces a save and `/` opens the block menu.
+
 ## Where things live
 
 ```
@@ -101,11 +117,16 @@ apps/api/app
   models/       SQLAlchemy 2.0 tables
   schemas/      Pydantic v2 request/response models
   routers/      HTTP surface
-  services/     storage, import (pdf/docx), export, notifications
+  services/     storage, import (pdf/docx), export, anchors, stats, notifications
   db/           engine, session, seed
 alembic/        migrations (baseline + increments)
 docs/           ARCHITECTURE.md
 ```
+
+The two files worth reading first are `apps/web/src/lib/anchor.ts` — the three-stage resolution
+that lets an annotation survive an edit to the page under it — and
+`apps/web/src/features/reader/extensions/Annotations.ts`, which paints those annotations as
+ProseMirror decorations so the book document itself is never touched.
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the data model, the anchor format that makes
 passage-anchored discussion work, and what was deliberately deferred.
@@ -120,4 +141,10 @@ passage-anchored discussion work, and what was deliberately deferred.
 - Drafts are private to their author until published; "invite to preview" issues a share link that
   grants read + comment access to that draft only.
 - Imported PDFs and DOCX files always land as **private drafts**. Nothing uploaded is ever
-  auto-published.
+  auto-published. The original file is kept forever; if the conversion is poor, `/pdf/:slug` reads
+  it directly and highlighting, notes and anchored discussions all still work there.
+- Reading time is tracked passively — a 15-second heartbeat that only ticks while the tab is
+  focused and the reader is open. It is never shown mid-read, and one toggle in Settings hides
+  every statistic from your profile.
+- There is no test suite, by design. `npm run smoke` covers boot, migrations, `/health` and one
+  authenticated round-trip; see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) → Testing.
