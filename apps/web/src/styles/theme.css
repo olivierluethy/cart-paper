@@ -33,6 +33,8 @@
   --reader-size: 1.125rem;
   --reader-leading: 1.75;
   --reader-width: 34rem;
+  --reader-face: 'Literata Variable', Literata, Georgia, serif;
+  --reader-face-sans: 'IBM Plex Sans', ui-sans-serif, sans-serif;
 
   color-scheme: dark;
 }

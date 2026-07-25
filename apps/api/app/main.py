@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.config import settings
-from app.routers import assets, auth, books, favorites, publishing
+from app.routers import assets, auth, books, favorites, publishing, reading
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 
@@ -42,6 +42,7 @@ app.include_router(books.router)
 app.include_router(assets.router)
 app.include_router(publishing.router)
 app.include_router(favorites.router)
+app.include_router(reading.router)
 
 
 @app.get("/health", tags=["meta"])

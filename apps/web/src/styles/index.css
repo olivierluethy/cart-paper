@@ -76,7 +76,10 @@
 
   /* ---- book prose (reader + editor share this) ----------------------- */
   .cart-prose {
-    @apply font-read text-ink-text;
+    @apply text-ink-text;
+    /* Typeface comes from a variable so the reader's serif/sans preference can
+       override it without fighting specificity. */
+    font-family: var(--reader-face);
     font-size: var(--reader-size);
     line-height: var(--reader-leading);
     hanging-punctuation: first last;

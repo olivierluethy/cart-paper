@@ -5,11 +5,15 @@ import { BookDetailPage } from '@/features/library/BookDetailPage'
 import { ShelfPage } from '@/features/library/ShelfPage'
 import { WriteEntryPage } from '@/features/editor/WriteEntryPage'
 import { WorkspacePage } from '@/features/editor/WorkspacePage'
+import { ReaderPage } from '@/features/reader/ReaderPage'
 import { NotFoundPage } from '@/app/NotFoundPage'
 
 export function AppRoutes() {
   return (
     <Routes>
+      {/* The reader is full-bleed: no site chrome competing with the page. */}
+      <Route path="read/:slug" element={<ReaderPage />} />
+
       <Route element={<Layout />}>
         <Route index element={<LibraryPage />} />
         <Route path="books/:slug" element={<BookDetailPage />} />
