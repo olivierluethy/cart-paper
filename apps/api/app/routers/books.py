@@ -3,12 +3,12 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, HTTPException, Query, status
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.deps import CurrentUser, DbSession, InviteToken, MaybeUser
-from app.models import Book, BookStatus, Page
+from app.models import Book, BookStatus, Comment, Page, Rating, User
 from app.schemas.book import (
     EMPTY_DOC,
     BookCreate,
@@ -33,22 +33,61 @@ router = APIRouter(prefix="/books", tags=["books"])
 async def list_books(
     db: DbSession,
     user: MaybeUser,
+    q: str | None = Query(None, max_length=120, description="Title, subtitle, description or author"),
+    tag: str | None = Query(None, max_length=40),
+    sort: str = Query("newest", pattern="^(newest|top_rated|most_discussed|title)$"),
     limit: int = Query(24, ge=1, le=100),
     offset: int = Query(0, ge=0),
 ) -> PageEnvelope[BookSummary]:
-    """The public library: published books only. Search and filters land in step 18."""
-    where = Book.status == BookStatus.published
-    total = await db.scalar(select(func.count()).select_from(Book).where(where)) or 0
-    rows = (
-        await db.scalars(
-            select(Book)
-            .options(selectinload(Book.author))
-            .where(where)
-            .order_by(Book.published_at.desc().nullslast(), Book.created_at.desc())
-            .limit(limit)
-            .offset(offset)
+    """The public library. Search covers title, author and description — full-text
+    across book bodies is out of scope for v1 (see docs/ARCHITECTURE.md)."""
+    query = select(Book).options(selectinload(Book.author)).where(Book.status == BookStatus.published)
+    counter = select(func.count()).select_from(Book).where(Book.status == BookStatus.published)
+
+    if q:
+        needle = f"%{q.strip().lower()}%"
+        condition = or_(
+            func.lower(Book.title).like(needle),
+            func.lower(func.coalesce(Book.subtitle, "")).like(needle),
+            func.lower(func.coalesce(Book.description, "")).like(needle),
+            Book.author_id.in_(
+                select(User.id).where(
+                    or_(func.lower(User.display_name).like(needle), func.lower(User.handle).like(needle))
+                )
+            ),
         )
-    ).all()
+        query = query.where(condition)
+        counter = counter.where(condition)
+
+    if tag:
+        condition = Book.tags.contains([tag.strip().lower()])
+        query = query.where(condition)
+        counter = counter.where(condition)
+
+    if sort == "top_rated":
+        rating = (
+            select(func.avg(Rating.value))
+            .where(Rating.book_id == Book.id)
+            .correlate(Book)
+            .scalar_subquery()
+        )
+        query = query.order_by(rating.desc().nullslast(), Book.published_at.desc().nullslast())
+    elif sort == "most_discussed":
+        discussion = (
+            select(func.count())
+            .select_from(Comment)
+            .where(Comment.book_id == Book.id, Comment.is_deleted.is_(False))
+            .correlate(Book)
+            .scalar_subquery()
+        )
+        query = query.order_by(discussion.desc(), Book.published_at.desc().nullslast())
+    elif sort == "title":
+        query = query.order_by(func.lower(Book.title))
+    else:
+        query = query.order_by(Book.published_at.desc().nullslast(), Book.created_at.desc())
+
+    total = await db.scalar(counter) or 0
+    rows = (await db.scalars(query.limit(limit).offset(offset))).all()
     items = await svc.summarize(db, list(rows), user)
     return PageEnvelope[BookSummary](
         items=[BookSummary.model_validate(item) for item in items],
@@ -56,6 +95,18 @@ async def list_books(
         limit=limit,
         offset=offset,
     )
+
+
+@router.get("/tags", response_model=list[dict])
+async def popular_tags(db: DbSession, limit: int = Query(24, ge=1, le=60)) -> list[dict]:
+    """Tag chips for the library, counted across published books only."""
+    rows = await db.scalars(select(Book.tags).where(Book.status == BookStatus.published))
+    counts: dict[str, int] = {}
+    for tags in rows:
+        for tag in tags or []:
+            counts[tag] = counts.get(tag, 0) + 1
+    ordered = sorted(counts.items(), key=lambda item: (-item[1], item[0]))
+    return [{"tag": tag, "count": count} for tag, count in ordered[:limit]]
 
 
 @router.get("/mine", response_model=list[BookSummary])

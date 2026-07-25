@@ -20,14 +20,34 @@ export const bookKeys = {
 
 const inviteOpts = (invite?: string | null) => (invite ? { invite } : undefined)
 
-export function useLibrary(params: { limit?: number; offset?: number } = {}) {
+export type LibraryQuery = {
+  q?: string
+  tag?: string
+  sort?: 'newest' | 'top_rated' | 'most_discussed' | 'title'
+  limit?: number
+  offset?: number
+}
+
+export function useLibrary(params: LibraryQuery = {}) {
   const search = new URLSearchParams()
+  if (params.q) search.set('q', params.q)
+  if (params.tag) search.set('tag', params.tag)
+  if (params.sort && params.sort !== 'newest') search.set('sort', params.sort)
   if (params.limit) search.set('limit', String(params.limit))
   if (params.offset) search.set('offset', String(params.offset))
   const qs = search.toString()
   return useQuery({
     queryKey: bookKeys.library(params),
     queryFn: () => api.get<Paged<BookSummary>>(`/books${qs ? `?${qs}` : ''}`),
+    placeholderData: (previous) => previous,
+  })
+}
+
+export function useTags() {
+  return useQuery({
+    queryKey: ['library', 'tags'],
+    queryFn: () => api.get<{ tag: string; count: number }[]>('/books/tags'),
+    staleTime: 5 * 60_000,
   })
 }
 
