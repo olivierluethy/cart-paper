@@ -25,6 +25,7 @@ import { IconButton } from '@/components/Button'
 import { ErrorState, Loading } from '@/components/States'
 import { useBook, usePagesFull } from '@/lib/books'
 import { useInviteToken } from '@/lib/invite'
+import { usePageMeta } from '@/lib/page-meta'
 import { useModal } from '@/lib/modal'
 import { useToast } from '@/lib/toast'
 import { anchorFrom, selectionRange, selectionRect } from '@/lib/anchor'
@@ -71,6 +72,7 @@ export function ReaderPage() {
 
   const page = list[index]
   const countPageTurn = useHeartbeat(slug, list.length > 0, invite)
+  usePageMeta(book.data?.title)
 
   const threads = comments.data ?? []
   const discussions = useMemo<DiscussionMarker[]>(

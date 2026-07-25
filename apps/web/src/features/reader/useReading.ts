@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { useAuth, useReadingSettings } from '@/lib/auth'
@@ -65,6 +65,12 @@ export function useHeartbeat(ref: string, active: boolean, invite?: string | nul
   const { user } = useAuth()
   const pagesTurned = useRef(0)
 
+  // Stable across renders: the reader's navigation callbacks depend on this,
+  // and an unstable identity would re-register the key handlers every keystroke.
+  const countPageTurn = useCallback(() => {
+    pagesTurned.current += 1
+  }, [])
+
   useEffect(() => {
     if (!user || !active) return
     let stopped = false
@@ -86,9 +92,7 @@ export function useHeartbeat(ref: string, active: boolean, invite?: string | nul
     }
   }, [ref, active, user, invite])
 
-  return () => {
-    pagesTurned.current += 1
-  }
+  return countPageTurn
 }
 
 /** Reader typography as CSS variables, so the prose stylesheet stays declarative. */

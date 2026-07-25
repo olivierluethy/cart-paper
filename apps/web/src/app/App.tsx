@@ -4,6 +4,8 @@ import { AuthProvider } from '@/lib/auth'
 import { ModalProvider } from '@/lib/modal'
 import { ToastProvider } from '@/lib/toast'
 import { AppRoutes } from '@/app/routes'
+import { ErrorBoundary } from '@/app/ErrorBoundary'
+import { ScrollToTop } from '@/lib/page-meta'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -20,10 +22,13 @@ export function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
+        <ScrollToTop />
         <ToastProvider>
           <AuthProvider>
             <ModalProvider>
-              <AppRoutes />
+              <ErrorBoundary>
+                <AppRoutes />
+              </ErrorBoundary>
             </ModalProvider>
           </AuthProvider>
         </ToastProvider>

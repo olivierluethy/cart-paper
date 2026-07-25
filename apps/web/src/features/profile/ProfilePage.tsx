@@ -16,6 +16,7 @@ import { useAuthGate } from '@/features/auth/useAuthGate'
 import { useMyBooks } from '@/lib/books'
 import { useModal } from '@/lib/modal'
 import { api } from '@/lib/api'
+import { usePageMeta } from '@/lib/page-meta'
 import { cn, formatDate, pluralize } from '@/lib/utils'
 import type { Profile } from '@/lib/types'
 
@@ -36,6 +37,8 @@ export function ProfilePage({ me }: { me?: boolean }) {
     queryFn: () => api.get<Profile>(`/users/${handle}`),
     enabled: Boolean(handle),
   })
+
+  usePageMeta(profile.data?.user.display_name, profile.data?.user.bio ?? undefined)
 
   if (loading) return <Loading />
   if (me && !user) {

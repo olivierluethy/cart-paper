@@ -12,6 +12,7 @@ import { BookComments } from '@/features/comments/BookComments'
 import { RatingWidget } from '@/features/library/RatingWidget'
 import { useBook, usePages } from '@/lib/books'
 import { useInviteToken } from '@/lib/invite'
+import { usePageMeta } from '@/lib/page-meta'
 import { cn, formatDate, pluralize } from '@/lib/utils'
 
 export function BookDetailPage() {
@@ -26,6 +27,11 @@ export function BookDetailPage() {
     slug: book.data?.slug ?? '',
     is_favorite: book.data?.is_favorite ?? false,
   })
+
+  usePageMeta(
+    book.data?.title,
+    book.data?.description ?? `${book.data?.title ?? ''} on CART Paper`,
+  )
 
   if (book.isLoading) return <Loading label="Fetching the book…" />
   if (book.isError || !book.data) {

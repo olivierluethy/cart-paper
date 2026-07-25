@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { MessageSquareQuote, Star } from 'lucide-react'
 import { motion } from 'motion/react'
 import { BookCover } from '@/components/BookCover'
-import { cn } from '@/lib/utils'
+import { cn, prefersReducedMotion } from '@/lib/utils'
 import type { BookSummary } from '@/lib/types'
 
 export function BookTile({
@@ -14,14 +14,15 @@ export function BookTile({
   index?: number
   size?: 'sm' | 'md' | 'lg'
 }) {
+  const reduced = prefersReducedMotion()
   return (
     <motion.li
-      initial={{ opacity: 0, y: 14 }}
+      initial={reduced ? false : { opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{
         duration: 0.34,
         // One orchestrated reveal on load, capped so a big shelf never crawls.
-        delay: Math.min(index * 0.035, 0.5),
+        delay: reduced ? 0 : Math.min(index * 0.035, 0.5),
         ease: [0.22, 0.61, 0.36, 1],
       }}
       className="group/tile"

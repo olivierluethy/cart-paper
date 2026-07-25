@@ -134,7 +134,8 @@ export function PdfReaderPage() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageNumber, pdf])
 
   if (book.isLoading) return <Loading label="Opening the original…" />
   if (book.isError || !book.data) {

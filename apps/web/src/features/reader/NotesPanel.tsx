@@ -108,8 +108,14 @@ export function NotesPanel({
                       </button>
                     )}
 
-                    <button type="button" onClick={() => onOpenNote(note)} className="block w-full text-left">
-                      <RichTextView value={note.body} />
+                    <RichTextView value={note.body} />
+
+                    <button
+                      type="button"
+                      onClick={() => onOpenNote(note)}
+                      className="mt-2 text-2xs text-ink-faint underline-offset-2 transition-colors hover:text-amber hover:underline"
+                    >
+                      Edit this note
                     </button>
 
                     {note.attachments.length > 0 && (
