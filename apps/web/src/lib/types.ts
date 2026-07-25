@@ -191,7 +191,9 @@ export type AppNotification = {
   book: { id: UUID; slug: string; title: string } | null
   comment_id: UUID | null
   page_id: UUID | null
+  page_index: number | null
   excerpt: string | null
+  quote: string | null
   read_at: string | null
   created_at: string
 }

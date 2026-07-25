@@ -15,6 +15,7 @@ from app.routers import (
     books,
     comments,
     favorites,
+    notifications,
     publishing,
     ratings,
     reading,
@@ -56,6 +57,7 @@ app.include_router(reading.router)
 app.include_router(annotations.router)
 app.include_router(comments.router)
 app.include_router(ratings.router)
+app.include_router(notifications.router)
 
 
 @app.get("/health", tags=["meta"])

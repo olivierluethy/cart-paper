@@ -6,6 +6,7 @@ import { ShelfPage } from '@/features/library/ShelfPage'
 import { WriteEntryPage } from '@/features/editor/WriteEntryPage'
 import { WorkspacePage } from '@/features/editor/WorkspacePage'
 import { ReaderPage } from '@/features/reader/ReaderPage'
+import { NotificationsPage } from '@/features/notifications/NotificationsPage'
 import { NotFoundPage } from '@/app/NotFoundPage'
 
 export function AppRoutes() {
@@ -18,6 +19,7 @@ export function AppRoutes() {
         <Route index element={<LibraryPage />} />
         <Route path="books/:slug" element={<BookDetailPage />} />
         <Route path="shelf" element={<ShelfPage />} />
+        <Route path="notifications" element={<NotificationsPage />} />
         <Route path="write" element={<WriteEntryPage />} />
         <Route path="write/:bookId" element={<WorkspacePage />} />
         <Route path="*" element={<NotFoundPage />} />

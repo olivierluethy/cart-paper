@@ -4,6 +4,7 @@ import { Wordmark } from '@/app/Wordmark'
 import { Avatar } from '@/components/Avatar'
 import { Button } from '@/components/Button'
 import { Menu, MenuDivider, MenuItem } from '@/components/Menu'
+import { NotificationBell } from '@/features/notifications/NotificationBell'
 import { useAuth } from '@/lib/auth'
 import { useAuthGate } from '@/features/auth/useAuthGate'
 import { useModal } from '@/lib/modal'
@@ -56,6 +57,7 @@ export function TopBar() {
             >
               Write
             </Button>
+            <NotificationBell />
             <Menu
               label="Account"
               trigger={({ toggle, open: isOpen, ref }) => (
