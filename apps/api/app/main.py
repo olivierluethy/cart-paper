@@ -19,6 +19,7 @@ from app.routers import (
     publishing,
     ratings,
     reading,
+    users,
 )
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
@@ -58,6 +59,7 @@ app.include_router(annotations.router)
 app.include_router(comments.router)
 app.include_router(ratings.router)
 app.include_router(notifications.router)
+app.include_router(users.router)
 
 
 @app.get("/health", tags=["meta"])

@@ -261,9 +261,36 @@ export type ReadingStats = {
   books: BookStats[]
 }
 
-export type TrailEntry =
-  | { kind: 'comment'; at: string; comment: Comment; book: BookSummary; page_index: number | null }
-  | { kind: 'note'; at: string; note: Note; book: BookSummary; page_index: number | null }
+export type TrailBook = { id: UUID; slug: string; title: string }
+
+export type TrailEntry = {
+  kind: 'comment' | 'note'
+  at: string
+  book: TrailBook
+  page_index: number | null
+  page_id: UUID | null
+  quote: string | null
+  comment: Comment | null
+  note: Note | null
+  reply_to: { id: UUID; author: string | null; excerpt: string } | null
+}
+
+export type TrailPage = {
+  items: TrailEntry[]
+  total: number
+  limit: number
+  offset: number
+}
+
+export type Profile = {
+  user: UserPublic
+  published_books: BookSummary[]
+  book_count: number
+  average_rating: number
+  comment_count: number
+  is_me: boolean
+  stats_visible: boolean
+}
 
 export type Paged<T> = {
   items: T[]
