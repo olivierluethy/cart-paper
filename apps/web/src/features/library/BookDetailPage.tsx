@@ -9,6 +9,7 @@ import { ShareButton } from '@/features/library/ShareButton'
 import { useToggleFavorite } from '@/features/library/useFavorite'
 import { useAuthGate } from '@/features/auth/useAuthGate'
 import { BookComments } from '@/features/comments/BookComments'
+import { RatingWidget } from '@/features/library/RatingWidget'
 import { useBook, usePages } from '@/lib/books'
 import { useInviteToken } from '@/lib/invite'
 import { cn, formatDate, pluralize } from '@/lib/utils'
@@ -170,6 +171,10 @@ export function BookDetailPage() {
             </Link>
           )}
         </div>
+      </div>
+
+      <div className="mt-12 max-w-2xl">
+        <RatingWidget book={item} />
       </div>
 
       <BookComments
