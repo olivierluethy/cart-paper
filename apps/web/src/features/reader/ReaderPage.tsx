@@ -13,11 +13,13 @@ import { PassageCommentModal } from '@/features/reader/PassageCommentModal'
 import { useAnnotationLayer, type DiscussionMarker } from '@/features/reader/useAnnotationLayer'
 import { useHighlightActions, useHighlights, useNoteActions, useNotes } from '@/features/reader/useAnnotations'
 import { NoteComposerPopover, type ComposerTarget } from '@/features/reader/NoteComposerPopover'
+import { EndOfBook } from '@/features/reader/EndOfBook'
 import { PRIVACY } from '@/features/reader/privacy'
 import {
   useHeartbeat,
   useProgress,
   useReaderTypography,
+  useRestartBook,
   useSaveProgress,
 } from '@/features/reader/useReading'
 import { useAllComments } from '@/features/comments/useComments'
@@ -55,6 +57,7 @@ export function ReaderPage() {
   const comments = useAllComments(slug, invite)
   const highlightActions = useHighlightActions(slug, invite)
   const noteActions = useNoteActions(slug, invite)
+  const restart = useRestartBook(slug)
 
   const list = useMemo(() => pages.data ?? [], [pages.data])
   const [index, setIndex] = useState(0)
@@ -69,6 +72,7 @@ export function ReaderPage() {
   const [markers, setMarkers] = useState<Marker[]>([])
   const [composer, setComposer] = useState<ComposerTarget | null>(null)
   const [savingNote, setSavingNote] = useState(false)
+  const [showEnd, setShowEnd] = useState(false)
 
   const resumeChecked = useRef(false)
   const deepLinkDone = useRef(false)
@@ -134,6 +138,8 @@ export function ReaderPage() {
     resumeChecked.current = true
     const saved = progress.data
     if (!saved?.page_id) return
+    // A finished book resumes silently at page one rather than nagging.
+    if (saved.completed_at && saved.percent >= 0.999) return
     const at = list.findIndex((item) => item.id === saved.page_id)
     if (at > 0) setResumeOffer(at)
   }, [progress.data, progress.isLoading, list])
@@ -141,6 +147,11 @@ export function ReaderPage() {
   const goTo = useCallback(
     (next: number, dir: number) => {
       if (!list.length) return
+      // Paging past the last page is how a reader says "I am done".
+      if (next > list.length - 1) {
+        setShowEnd(true)
+        return
+      }
       const bounded = Math.max(0, Math.min(next, list.length - 1))
       setDirection(dir)
       setIndex((current) => {
@@ -179,13 +190,21 @@ export function ReaderPage() {
 
   useEffect(() => {
     if (!page || !user) return
+    const bounded = Math.max(0, Math.min(index, Math.max(list.length - 1, 0)))
     saveProgress({
       page_id: page.id,
       anchor: null,
-      percent: list.length > 1 ? index / (list.length - 1) : 1,
+      percent: list.length > 1 ? bounded / (list.length - 1) : 1,
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index, page?.id, user])
+
+  // Confirm completion once the end screen is actually reached.
+  useEffect(() => {
+    if (!showEnd || !user || !page) return
+    saveProgress({ page_id: page.id, anchor: null, percent: 1, completed: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showEnd, user])
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -507,8 +526,7 @@ export function ReaderPage() {
           type="button"
           aria-label="Next page"
           onClick={() => goTo(index + 1, 1)}
-          disabled={index >= list.length - 1}
-          className="absolute inset-y-0 right-0 z-10 hidden w-[max(3rem,calc((100%-var(--reader-width))/2-3.5rem))] cursor-e-resize disabled:cursor-default lg:block"
+          className="absolute inset-y-0 right-0 z-10 hidden w-[max(3rem,calc((100%-var(--reader-width))/2-3.5rem))] cursor-e-resize lg:block"
         />
 
         <MarginMarkers
@@ -544,6 +562,25 @@ export function ReaderPage() {
             }
           }}
         />
+
+        <AnimatePresence>
+          {showEnd && book.data && (
+            <EndOfBook
+              book={book.data}
+              highlights={highlightList.length}
+              notes={noteList.length}
+              onRate={() => navigate(`/books/${slug}#rating`)}
+              onComment={() => navigate(`/books/${slug}#comments`)}
+              onRestart={async () => {
+                await restart.mutateAsync().catch(() => undefined)
+                setShowEnd(false)
+                goTo(0, -1)
+              }}
+              onClose={() => setShowEnd(false)}
+              onLibrary={() => navigate('/')}
+            />
+          )}
+        </AnimatePresence>
 
         <AnimatePresence mode="wait" initial={false}>
           <motion.article
@@ -643,9 +680,8 @@ export function ReaderPage() {
           Page {index + 1} of {list.length}
         </span>
         <IconButton
-          label="Next page"
+          label={index >= list.length - 1 ? 'Finish the book' : 'Next page'}
           onClick={() => goTo(index + 1, 1)}
-          disabled={index >= list.length - 1}
         >
           <ChevronRight size={18} />
         </IconButton>

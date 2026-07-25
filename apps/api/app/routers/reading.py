@@ -43,15 +43,23 @@ async def get_progress(
         page_index=index,
         anchor=row.anchor,
         percent=row.percent,
+        completed_at=row.completed_at,
+        restarted_count=row.restarted_count or 0,
         updated_at=row.updated_at,
     )
 
 
-@router.put("/books/{ref}/progress", response_model=ProgressOut)
+@router.api_route("/books/{ref}/progress", methods=["PUT", "PATCH"], response_model=ProgressOut)
 async def set_progress(
     ref: str, payload: ProgressIn, db: DbSession, user: CurrentUser, invite: InviteToken
 ) -> ProgressOut:
-    """Called continuously while reading — upsert, never a round trip to read first."""
+    """Called continuously while reading — upsert, never a round trip to read first.
+
+    **Monotonic.** The stored position is a high-water mark: paging backwards,
+    clicking past the last page or reloading must never lower it, and nothing
+    here ever clears ``completed_at``. Without that, a reader who flicks back to
+    re-read chapter one would lose their place on the next reload.
+    """
     book = await svc.load_book(db, ref)
     await svc.access_for(db, book, user, invite)
 
@@ -63,21 +71,67 @@ async def set_progress(
     if row is None:
         row = ReadingProgress(user_id=user.id, book_id=book.id)
         db.add(row)
-    row.page_id = payload.page_id
-    row.anchor = payload.anchor
-    row.percent = payload.percent
+
+    if payload.percent >= (row.percent or 0.0):
+        row.page_id = payload.page_id
+        row.anchor = payload.anchor
+        row.percent = payload.percent
+
+    # Finished when the reader confirms the last page, or when progress is
+    # unambiguously at the end. Never unset.
+    if (payload.completed or payload.percent >= 0.999) and row.completed_at is None:
+        row.completed_at = datetime.now(UTC)
+
     row.updated_at = datetime.now(UTC)
     await db.flush()
+    return await _progress_out(db, book.id, row)
 
+
+@router.post("/books/{ref}/progress/restart", response_model=ProgressOut)
+async def restart_progress(
+    ref: str, db: DbSession, user: CurrentUser, invite: InviteToken
+) -> ProgressOut:
+    """Read it again from page one.
+
+    Keeps ``completed_at`` — a finished book stays finished — and keeps every
+    highlight, note and discussion. Only the position moves.
+    """
+    book = await svc.load_book(db, ref)
+    await svc.access_for(db, book, user, invite)
+
+    row = await db.scalar(
+        select(ReadingProgress).where(
+            ReadingProgress.user_id == user.id, ReadingProgress.book_id == book.id
+        )
+    )
+    if row is None:
+        row = ReadingProgress(user_id=user.id, book_id=book.id)
+        db.add(row)
+
+    first = await db.scalar(
+        select(Page.id).where(Page.book_id == book.id).order_by(Page.index).limit(1)
+    )
+    row.page_id = first
+    row.anchor = None
+    row.percent = 0.0
+    row.restarted_count = (row.restarted_count or 0) + 1
+    row.updated_at = datetime.now(UTC)
+    await db.flush()
+    return await _progress_out(db, book.id, row)
+
+
+async def _progress_out(db, book_id, row: ReadingProgress) -> ProgressOut:
     index = 0
     if row.page_id is not None:
         index = await db.scalar(select(Page.index).where(Page.id == row.page_id)) or 0
     return ProgressOut(
-        book_id=book.id,
+        book_id=book_id,
         page_id=row.page_id,
         page_index=index,
         anchor=row.anchor,
         percent=row.percent,
+        completed_at=row.completed_at,
+        restarted_count=row.restarted_count or 0,
         updated_at=row.updated_at,
     )
 
@@ -122,7 +176,7 @@ async def continue_reading(db: DbSession, user: CurrentUser) -> list[ContinueRea
             select(ReadingProgress, Book)
             .join(Book, Book.id == ReadingProgress.book_id)
             .options(selectinload(Book.author))
-            .where(ReadingProgress.user_id == user.id, ReadingProgress.percent < 0.98)
+            .where(ReadingProgress.user_id == user.id)
             .order_by(ReadingProgress.updated_at.desc())
             .limit(12)
         )
@@ -146,6 +200,8 @@ async def continue_reading(db: DbSession, user: CurrentUser) -> list[ContinueRea
                 page_index=index,
                 anchor=progress.anchor,
                 percent=progress.percent,
+                completed_at=progress.completed_at,
+                restarted_count=progress.restarted_count or 0,
                 updated_at=progress.updated_at,
                 book=summaries[book.id],
             )

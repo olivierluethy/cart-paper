@@ -26,6 +26,10 @@ class ReadingProgress(Base):
     )
     anchor: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     percent: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    # Set once the last page is confirmed read. A finished book stays finished:
+    # restarting keeps this, so "you have read this" survives a re-read.
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    restarted_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )

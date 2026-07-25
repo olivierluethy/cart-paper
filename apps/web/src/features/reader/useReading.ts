@@ -23,16 +23,24 @@ export function useContinueReading(enabled: boolean) {
   })
 }
 
+type ProgressInput = {
+  page_id: UUID | null
+  anchor: Anchor | null
+  percent: number
+  completed?: boolean
+}
+
 /**
- * Progress is written continuously but coalesced: a reader flipping through ten
- * pages should cost one request, not ten.
+ * Progress is written continuously but coalesced: at most one request every 2s,
+ * plus one on unmount and on visibilitychange so closing the tab never loses
+ * the last page turn. Identical payloads are dropped rather than re-sent.
  */
 export function useSaveProgress(ref: string, invite?: string | null) {
   const { user } = useAuth()
   const qc = useQueryClient()
 
   const save = useMutation({
-    mutationFn: (input: { page_id: UUID | null; anchor: Anchor | null; percent: number }) =>
+    mutationFn: (input: ProgressInput) =>
       api.put<ReadingProgress>(`/books/${ref}/progress`, input, invite ? { invite } : undefined),
     onSuccess: (progress) => {
       qc.setQueryData(['progress', ref], progress)
@@ -42,19 +50,45 @@ export function useSaveProgress(ref: string, invite?: string | null) {
 
   const saveRef = useRef(save)
   saveRef.current = save
+  const lastSent = useRef<string>('')
 
   const push = useRef(
-    debounce((input: { page_id: UUID | null; anchor: Anchor | null; percent: number }) => {
+    debounce((input: ProgressInput) => {
+      const key = JSON.stringify(input)
+      if (key === lastSent.current) return
+      lastSent.current = key
       saveRef.current.mutate(input)
-    }, 1200),
+    }, 2000),
   ).current
 
-  useEffect(() => () => push.flush(), [push])
+  useEffect(() => {
+    const flush = () => push.flush()
+    document.addEventListener('visibilitychange', flush)
+    window.addEventListener('pagehide', flush)
+    return () => {
+      document.removeEventListener('visibilitychange', flush)
+      window.removeEventListener('pagehide', flush)
+      push.flush()
+    }
+  }, [push])
 
-  return (input: { page_id: UUID | null; anchor: Anchor | null; percent: number }) => {
+  return (input: ProgressInput) => {
     if (!user) return
     push(input)
   }
+}
+
+/** Read it again from page one. Keeps completed_at, highlights and notes. */
+export function useRestartBook(ref: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => api.post<ReadingProgress>(`/books/${ref}/progress/restart`),
+    onSuccess: (progress) => {
+      qc.setQueryData(['progress', ref], progress)
+      qc.invalidateQueries({ queryKey: ['reading', 'continue'] })
+      qc.invalidateQueries({ queryKey: ['book', ref] })
+    },
+  })
 }
 
 /**

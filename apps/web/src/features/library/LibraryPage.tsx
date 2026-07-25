@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Library, Search, X } from 'lucide-react'
+import { Check, Library, RotateCcw, Search, X } from 'lucide-react'
 import { motion } from 'motion/react'
 import { BookGrid } from '@/components/BookTile'
 import { BookCover } from '@/components/BookCover'
@@ -10,7 +10,7 @@ import { useLibrary, useTags, type LibraryQuery } from '@/lib/books'
 import { useFavorites } from '@/features/library/useFavorite'
 import { useContinueReading } from '@/features/reader/useReading'
 import { useAuthGate } from '@/features/auth/useAuthGate'
-import { cn, pluralize } from '@/lib/utils'
+import { cn, formatDate, pluralize } from '@/lib/utils'
 
 const SORTS: { value: NonNullable<LibraryQuery['sort']>; label: string }[] = [
   { value: 'newest', label: 'Newest' },
@@ -43,7 +43,10 @@ export function LibraryPage() {
 
   const books = library.data?.items ?? []
   const filtering = Boolean(debounced || tag || sort !== 'newest')
-  const continueReading = (reading.data ?? []).filter((entry) => entry.percent > 0.01)
+  const reads = reading.data ?? []
+  // A finished book is not "continue reading" — it moves to its own row.
+  const continueReading = reads.filter((entry) => !entry.completed_at && entry.percent > 0.01)
+  const finished = reads.filter((entry) => entry.completed_at)
 
   return (
     <div className="mx-auto max-w-[110rem] px-4 py-10 sm:px-6 lg:py-14">
@@ -88,6 +91,42 @@ export function LibraryPage() {
                   <p className="mt-1.5 text-2xs text-ink-faint">
                     page {entry.page_index + 1} · {Math.round(entry.percent * 100)}%
                   </p>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {!filtering && finished.length > 0 && (
+        <section className="mb-14">
+          <SectionHeading title="Finished" count={finished.length} />
+          <ul className="flex gap-5 overflow-x-auto pb-2 no-scrollbar">
+            {finished.map((entry) => (
+              <li key={entry.book_id} className="w-36 shrink-0">
+                <Link to={`/books/${entry.book.slug}`} className="group/tile block">
+                  <div className="group/cover relative">
+                    <BookCover book={entry.book} design={entry.book.front_cover} size="sm" className="w-full" />
+                    <span
+                      className="absolute -right-1.5 -top-1.5 inline-grid h-6 w-6 place-items-center rounded-full border border-success/50 bg-ink-bg text-success"
+                      title={`Finished on ${formatDate(entry.completed_at!)}`}
+                    >
+                      <Check size={12} />
+                    </span>
+                  </div>
+                  <p className="mt-3 line-clamp-2 font-display text-sm leading-snug text-ink-text transition-colors group-hover/tile:text-amber">
+                    {entry.book.title}
+                  </p>
+                  <p className="mt-1 text-2xs text-ink-faint">
+                    finished {formatDate(entry.completed_at!)}
+                  </p>
+                </Link>
+                <Link
+                  to={`/read/${entry.book.slug}`}
+                  className="mt-1.5 inline-flex items-center gap-1 text-2xs text-ink-faint transition-colors hover:text-amber"
+                >
+                  <RotateCcw size={10} />
+                  Read again
                 </Link>
               </li>
             ))}

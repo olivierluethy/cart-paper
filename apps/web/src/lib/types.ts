@@ -173,6 +173,8 @@ export type ReadingProgress = {
   page_index: number
   anchor: Anchor | null
   percent: number
+  completed_at: string | null
+  restarted_count: number
   updated_at: string
 }
 

@@ -81,6 +81,8 @@ class ProgressOut(ORMModel):
     page_index: int = 0
     anchor: dict[str, Any] | None
     percent: float
+    completed_at: datetime | None = None
+    restarted_count: int = 0
     updated_at: datetime
 
 

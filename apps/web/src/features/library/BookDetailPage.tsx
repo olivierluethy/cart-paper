@@ -1,5 +1,5 @@
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { BookOpen, FileText, Heart, PenLine, Printer, Star, Users } from 'lucide-react'
+import { BookOpen, Check, FileText, Heart, PenLine, Printer, RotateCcw, Star, Users } from 'lucide-react'
 import { motion } from 'motion/react'
 import { BookCover } from '@/components/BookCover'
 import { Button } from '@/components/Button'
@@ -11,6 +11,7 @@ import { useAuthGate } from '@/features/auth/useAuthGate'
 import { BookComments } from '@/features/comments/BookComments'
 import { RatingWidget } from '@/features/library/RatingWidget'
 import { useBook, usePages } from '@/lib/books'
+import { useRestartBook } from '@/features/reader/useReading'
 import { useInviteToken } from '@/lib/invite'
 import { usePageMeta } from '@/lib/page-meta'
 import { cn, formatDate, pluralize } from '@/lib/utils'
@@ -22,6 +23,7 @@ export function BookDetailPage() {
   const { requireAuth } = useAuthGate()
   const book = useBook(slug, invite)
   const pages = usePages(slug, invite)
+  const restart = useRestartBook(slug)
   const favorite = useToggleFavorite({
     id: book.data?.id ?? '',
     slug: book.data?.slug ?? '',
@@ -121,7 +123,11 @@ export function BookDetailPage() {
               icon={<BookOpen size={16} />}
               onClick={() => navigate(readTo)}
             >
-              {item.progress && item.progress.percent > 0.01 ? 'Continue reading' : 'Read'}
+              {item.progress?.completed_at
+                ? 'Read again'
+                : item.progress && item.progress.percent > 0.01
+                  ? 'Continue reading'
+                  : 'Read'}
             </Button>
 
             <Button
@@ -189,21 +195,47 @@ export function BookDetailPage() {
             </p>
           )}
 
-          {item.progress && item.progress.percent > 0.01 && (
-            <Link
-              to={readTo}
-              className="mt-6 flex max-w-sm items-center gap-3 rounded-md border border-ink-line px-4 py-3 text-sm transition-colors hover:border-amber/40"
-            >
-              <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-ink-line">
-                <span
-                  className="block h-full rounded-full bg-amber"
-                  style={{ width: `${Math.round(item.progress.percent * 100)}%` }}
-                />
+          {item.progress?.completed_at ? (
+            <div className="mt-6 flex max-w-sm flex-wrap items-center gap-x-3 gap-y-2 rounded-md border border-success/40 bg-success/[0.06] px-4 py-3 text-sm">
+              <Check size={15} className="text-success" />
+              <span className="text-ink-text">
+                Finished on {formatDate(item.progress.completed_at)}
               </span>
-              <span className="shrink-0 text-xs tabular-nums text-ink-muted">
-                {Math.round(item.progress.percent * 100)}% · page {item.progress.page_index + 1}
-              </span>
-            </Link>
+              {item.progress.restarted_count > 0 && (
+                <span className="text-2xs text-ink-faint">
+                  read {item.progress.restarted_count + 1}×
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={async () => {
+                  await restart.mutateAsync().catch(() => undefined)
+                  navigate(readTo)
+                }}
+                className="ml-auto inline-flex items-center gap-1.5 text-xs text-amber underline-offset-4 hover:underline"
+              >
+                <RotateCcw size={13} />
+                Read again
+              </button>
+            </div>
+          ) : (
+            item.progress &&
+            item.progress.percent > 0.01 && (
+              <Link
+                to={readTo}
+                className="mt-6 flex max-w-sm items-center gap-3 rounded-md border border-ink-line px-4 py-3 text-sm transition-colors hover:border-amber/40"
+              >
+                <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-ink-line">
+                  <span
+                    className="block h-full rounded-full bg-amber"
+                    style={{ width: `${Math.round(item.progress.percent * 100)}%` }}
+                  />
+                </span>
+                <span className="shrink-0 text-xs tabular-nums text-ink-muted">
+                  {Math.round(item.progress.percent * 100)}% · page {item.progress.page_index + 1}
+                </span>
+              </Link>
+            )
           )}
         </div>
       </div>

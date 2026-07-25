@@ -13,6 +13,9 @@ class ProgressIn(BaseModel):
     page_id: uuid.UUID | None = None
     anchor: dict[str, Any] | None = None
     percent: float = Field(default=0.0, ge=0.0, le=1.0)
+    # Set by the reader when the last page is actually confirmed read, rather
+    # than inferred from a percentage that rounding could nudge over the line.
+    completed: bool = False
 
 
 class HeartbeatIn(BaseModel):

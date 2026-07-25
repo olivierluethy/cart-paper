@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { BookOpen, Heart, Settings, Star } from 'lucide-react'
+import { BookOpen, Check, Heart, RotateCcw, Settings, Star } from 'lucide-react'
 import { Avatar } from '@/components/Avatar'
 import { Button } from '@/components/Button'
 import { BookGrid } from '@/components/BookTile'
@@ -147,8 +147,10 @@ export function ProfilePage({ me }: { me?: boolean }) {
 function ContinueReadingTab() {
   const reading = useContinueReading(true)
   if (reading.isLoading) return <Loading />
-  const items = reading.data ?? []
-  if (items.length === 0) {
+  const all = reading.data ?? []
+  const items = all.filter((entry) => !entry.completed_at)
+  const finished = all.filter((entry) => entry.completed_at)
+  if (all.length === 0) {
     return (
       <EmptyState
         icon={BookOpen}
@@ -158,34 +160,75 @@ function ContinueReadingTab() {
     )
   }
   return (
-    <ul className="space-y-2.5">
-      {items.map((entry) => (
-        <li key={entry.book_id}>
-          <Link
-            to={`/read/${entry.book.slug}`}
-            className="flex items-center gap-4 rounded-lg border border-ink-line px-4 py-3.5 transition-colors hover:border-amber/40"
-          >
-            <span className="min-w-0 flex-1">
-              <span className="block truncate font-display text-sm text-ink-text">
-                {entry.book.title}
-              </span>
-              <span className="mt-0.5 block text-xs text-ink-faint">
-                {entry.book.author.display_name} · page {entry.page_index + 1}
-              </span>
-            </span>
-            <span className="h-1.5 w-28 overflow-hidden rounded-full bg-ink-line">
-              <span
-                className="block h-full rounded-full bg-amber"
-                style={{ width: `${Math.round(entry.percent * 100)}%` }}
-              />
-            </span>
-            <span className="w-10 shrink-0 text-right text-xs tabular-nums text-ink-muted">
-              {Math.round(entry.percent * 100)}%
-            </span>
-          </Link>
-        </li>
-      ))}
-    </ul>
+    <div className="space-y-10">
+      {items.length > 0 && (
+        <section>
+          <h3 className="label mb-3">In progress · {items.length}</h3>
+          <ul className="space-y-2.5">
+            {items.map((entry) => (
+              <li key={entry.book_id}>
+                <Link
+                  to={`/read/${entry.book.slug}`}
+                  className="flex items-center gap-4 rounded-lg border border-ink-line px-4 py-3.5 transition-colors hover:border-amber/40"
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-display text-sm text-ink-text">
+                      {entry.book.title}
+                    </span>
+                    <span className="mt-0.5 block text-xs text-ink-faint">
+                      {entry.book.author.display_name} · page {entry.page_index + 1}
+                    </span>
+                  </span>
+                  <span className="h-1.5 w-28 overflow-hidden rounded-full bg-ink-line">
+                    <span
+                      className="block h-full rounded-full bg-amber"
+                      style={{ width: `${Math.round(entry.percent * 100)}%` }}
+                    />
+                  </span>
+                  <span className="w-10 shrink-0 text-right text-xs tabular-nums text-ink-muted">
+                    {Math.round(entry.percent * 100)}%
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {finished.length > 0 && (
+        <section>
+          <h3 className="label mb-3">Finished · {finished.length}</h3>
+          <ul className="space-y-2.5">
+            {finished.map((entry) => (
+              <li key={entry.book_id}>
+                <div className="flex items-center gap-4 rounded-lg border border-success/30 bg-success/[0.04] px-4 py-3.5">
+                  <Check size={15} className="shrink-0 text-success" />
+                  <span className="min-w-0 flex-1">
+                    <Link
+                      to={`/books/${entry.book.slug}`}
+                      className="block truncate font-display text-sm text-ink-text hover:text-amber"
+                    >
+                      {entry.book.title}
+                    </Link>
+                    <span className="mt-0.5 block text-xs text-ink-faint">
+                      finished {formatDate(entry.completed_at!)}
+                      {entry.restarted_count > 0 && ` · read ${entry.restarted_count + 1}×`}
+                    </span>
+                  </span>
+                  <Link
+                    to={`/read/${entry.book.slug}`}
+                    className="inline-flex shrink-0 items-center gap-1.5 text-xs text-amber underline-offset-4 hover:underline"
+                  >
+                    <RotateCcw size={12} />
+                    Read again
+                  </Link>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </div>
   )
 }
 
