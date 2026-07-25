@@ -1,0 +1,115 @@
+/* ---------------------------------------------------------------------------
+   Browser print path. Paper is white and the ink is dark — the night palette
+   is right on a screen and wrong on a page.
+   --------------------------------------------------------------------------- */
+
+@media print {
+  @page {
+    size: A5;
+    margin: 18mm 16mm 20mm;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    color: #1b1a17 !important;
+  }
+
+  /* Everything that is not the book itself. */
+  .no-print,
+  header[role='banner'],
+  nav,
+  footer,
+  .paper-grain::before,
+  .vignette::after {
+    display: none !important;
+  }
+
+  .print-book {
+    --reader-size: 10.5pt;
+    --reader-leading: 1.55;
+    --reader-width: 100%;
+    color: #1b1a17;
+  }
+
+  .print-book .cart-prose,
+  .print-book .cart-prose * {
+    color: #1b1a17 !important;
+  }
+
+  .print-book .cart-prose a {
+    color: #8a5a12 !important;
+    text-decoration: none;
+  }
+
+  .print-book .cart-prose blockquote {
+    border-color: #c9a227 !important;
+  }
+
+  .print-book .cart-prose pre,
+  .print-book .cart-prose code {
+    background: #f4f2ee !important;
+    color: #1b1a17 !important;
+    border-color: #e3ded4 !important;
+  }
+
+  .print-book [data-block='callout'] {
+    background: #faf4e6 !important;
+    border-color: #e6d7b0 !important;
+  }
+
+  /* One printed page per book page. */
+  .print-page {
+    break-after: page;
+  }
+  .print-page:last-of-type {
+    break-after: auto;
+  }
+
+  .print-cover {
+    height: 100vh;
+    break-after: page;
+    color: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .print-cover * {
+    color: #fff !important;
+  }
+
+  .print-book h1,
+  .print-book h2,
+  .print-book h3,
+  .print-book h4 {
+    break-after: avoid;
+  }
+  .print-book p {
+    orphans: 2;
+    widows: 2;
+  }
+  .print-book figure,
+  .print-appendix .mark {
+    break-inside: avoid;
+  }
+  .print-book img {
+    max-width: 100%;
+  }
+
+  /* Highlights and discussion markers are excluded from print by default. */
+  .print-book .cart-highlight {
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+  .print-book .cart-anchor {
+    border-bottom: 0 !important;
+  }
+  .print-book.with-marks .cart-highlight {
+    background: #fdf3d0 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .print-appendix {
+    break-before: page;
+  }
+}

@@ -14,6 +14,7 @@ from app.routers import (
     auth,
     books,
     comments,
+    export,
     favorites,
     imports,
     notifications,
@@ -62,6 +63,7 @@ app.include_router(ratings.router)
 app.include_router(notifications.router)
 app.include_router(users.router)
 app.include_router(imports.router)
+app.include_router(export.router)
 
 
 @app.get("/health", tags=["meta"])

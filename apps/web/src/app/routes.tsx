@@ -7,6 +7,7 @@ import { WriteEntryPage } from '@/features/editor/WriteEntryPage'
 import { WorkspacePage } from '@/features/editor/WorkspacePage'
 import { ReaderPage } from '@/features/reader/ReaderPage'
 import { PdfReaderPage } from '@/features/import/PdfReaderPage'
+import { PrintPage } from '@/features/print/PrintPage'
 import { NotificationsPage } from '@/features/notifications/NotificationsPage'
 import { ProfilePage } from '@/features/profile/ProfilePage'
 import { NotFoundPage } from '@/app/NotFoundPage'
@@ -17,6 +18,7 @@ export function AppRoutes() {
       {/* The reader is full-bleed: no site chrome competing with the page. */}
       <Route path="read/:slug" element={<ReaderPage />} />
       <Route path="pdf/:slug" element={<PdfReaderPage />} />
+      <Route path="books/:slug/print" element={<PrintPage />} />
 
       <Route element={<Layout />}>
         <Route index element={<LibraryPage />} />

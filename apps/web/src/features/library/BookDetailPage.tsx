@@ -1,5 +1,5 @@
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { BookOpen, FileText, Heart, PenLine, Star, Users } from 'lucide-react'
+import { BookOpen, FileText, Heart, PenLine, Printer, Star, Users } from 'lucide-react'
 import { motion } from 'motion/react'
 import { BookCover } from '@/components/BookCover'
 import { Button } from '@/components/Button'
@@ -146,6 +146,14 @@ export function BookDetailPage() {
               text={item.description ?? undefined}
               url={`${window.location.origin}/books/${item.slug}`}
             />
+
+            <Button
+              variant="ghost"
+              icon={<Printer size={15} />}
+              onClick={() => navigate(`/books/${item.slug}/print`)}
+            >
+              Print / Export
+            </Button>
 
             {item.import_source && (
               <Button

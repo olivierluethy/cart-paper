@@ -12,6 +12,8 @@
 @tailwind components;
 @tailwind utilities;
 
+@import './print.css';
+
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
