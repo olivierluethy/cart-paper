@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { AnimatePresence } from 'motion/react'
-import { ChevronLeft, ChevronRight, PanelRight, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Lock, MessageSquare, PanelRight, X } from 'lucide-react'
 import { GlobalWorkerOptions, getDocument, type PDFDocumentProxy } from 'pdfjs-dist'
 import PdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { PdfPageView, type Overlay } from '@/features/import/PdfPageView'
@@ -13,6 +13,7 @@ import { PassageCommentModal } from '@/features/reader/PassageCommentModal'
 import { useHighlightActions, useHighlights, useNotes } from '@/features/reader/useAnnotations'
 import { useAllComments } from '@/features/comments/useComments'
 import { useAuthGate } from '@/features/auth/useAuthGate'
+import { PRIVACY } from '@/features/reader/privacy'
 import { IconButton } from '@/components/Button'
 import { ErrorState, Loading } from '@/components/States'
 import { useBook } from '@/lib/books'
@@ -309,12 +310,18 @@ export function PdfReaderPage() {
               key={value}
               type="button"
               onClick={() => setTab(value)}
+              title={value === 'marks' ? PRIVACY.private.full : PRIVACY.public.full}
               className={cn(
-                'rounded-md px-3 py-1.5 text-xs transition-colors',
-                tab === value ? 'bg-ink-line/60 text-ink-text' : 'text-ink-muted hover:text-ink-text',
+                'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs transition-colors',
+                tab === value
+                  ? value === 'marks'
+                    ? 'bg-amber/15 text-amber'
+                    : 'bg-teal/20 text-teal-soft'
+                  : 'text-ink-muted hover:text-ink-text',
               )}
             >
-              {value === 'marks' ? 'Your marks' : 'Discussion'}
+              {value === 'marks' ? <Lock size={11} /> : <MessageSquare size={11} />}
+              {value === 'marks' ? `Private · ${(notes.data ?? []).length}` : `Public · ${threads.length}`}
             </button>
           ))}
           <IconButton label="Close panel" onClick={() => setPanelOpen(false)} className="ml-auto">

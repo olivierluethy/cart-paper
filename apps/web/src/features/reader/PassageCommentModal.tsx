@@ -4,6 +4,7 @@ import { Modal } from '@/components/Modal'
 import { Button } from '@/components/Button'
 import { useCommentActions } from '@/features/comments/useComments'
 import { quoteExcerpt } from '@/lib/anchor'
+import { VisibilityBanner } from '@/features/reader/privacy'
 import type { Anchor, Comment, UUID } from '@/lib/types'
 
 /**
@@ -58,6 +59,7 @@ export function PassageCommentModal({
         </>
       }
     >
+      <VisibilityBanner visibility="public" className="mb-4" />
       <blockquote className="mb-4 rounded-r-md border-l-2 border-teal/70 bg-ink-bg/60 py-3 pl-4 pr-3 font-read text-sm italic leading-relaxed text-ink-muted">
         {quoteExcerpt(anchor, 320)}
       </blockquote>

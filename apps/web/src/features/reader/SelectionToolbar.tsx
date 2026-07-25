@@ -1,5 +1,5 @@
 import { motion } from 'motion/react'
-import { Copy, MessageSquareQuote, StickyNote, TextQuote } from 'lucide-react'
+import { Copy, MessageSquare, Pencil, TextQuote } from 'lucide-react'
 import { HIGHLIGHT_COLORS, type HighlightColor } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -31,10 +31,10 @@ export function SelectionToolbar({
   activeColor?: HighlightColor | null
 }) {
   // Sit above the selection unless it is near the top of the viewport.
-  const above = rect.top > 120
+  const above = rect.top > 150
   const style: React.CSSProperties = {
     position: 'fixed',
-    left: Math.min(Math.max(rect.left + rect.width / 2, 180), window.innerWidth - 180),
+    left: Math.min(Math.max(rect.left + rect.width / 2, 230), window.innerWidth - 230),
     top: above ? rect.top - 12 : rect.bottom + 12,
     transform: `translate(-50%, ${above ? '-100%' : '0'})`,
   }
@@ -49,15 +49,16 @@ export function SelectionToolbar({
       aria-label="Selected passage"
       // The toolbar must not steal the selection it is acting on.
       onMouseDown={(event) => event.preventDefault()}
-      className="surface-raised z-40 flex items-center gap-1 rounded-full px-2 py-1.5"
+      className="surface-raised z-40 flex flex-col gap-1.5 rounded-xl px-2 py-2"
     >
-      <div className="flex items-center gap-1 pr-1">
+      <div className="flex items-center gap-1.5 px-0.5">
+        <span className="mr-0.5 text-2xs uppercase tracking-[0.12em] text-ink-faint">Highlight</span>
         {HIGHLIGHT_COLORS.map((color) => (
           <button
             key={color}
             type="button"
             aria-label={`Highlight ${color}`}
-            title={color}
+            title={`Highlight ${color}`}
             aria-pressed={activeColor === color}
             onClick={() => actions.onHighlight(color)}
             className={cn(
@@ -69,12 +70,28 @@ export function SelectionToolbar({
         ))}
       </div>
 
-      <span className="h-5 w-px bg-ink-line" aria-hidden />
+      <div className="h-px bg-ink-line" aria-hidden />
 
-      <Action icon={StickyNote} label="Add note" onClick={actions.onNote} />
-      <Action icon={MessageSquareQuote} label="Comment on this passage" onClick={actions.onComment} />
-      <Action icon={Copy} label="Copy" onClick={actions.onCopy} />
-      <Action icon={TextQuote} label="Quote" onClick={actions.onQuote} />
+      {/* Text labels, not icon-only: nothing here should need a hover to explain it. */}
+      <div className="flex items-center gap-0.5">
+        <Action
+          icon={Pencil}
+          label="Note"
+          hint="Private · only you"
+          tone="private"
+          onClick={actions.onNote}
+        />
+        <Action
+          icon={MessageSquare}
+          label="Discuss"
+          hint="Public · everyone"
+          tone="public"
+          onClick={actions.onComment}
+        />
+        <span className="mx-0.5 h-6 w-px bg-ink-line" aria-hidden />
+        <Action icon={Copy} label="Copy" onClick={actions.onCopy} />
+        <Action icon={TextQuote} label="Quote" onClick={actions.onQuote} />
+      </div>
     </motion.div>
   )
 }
@@ -82,21 +99,34 @@ export function SelectionToolbar({
 function Action({
   icon: Icon,
   label,
+  hint,
+  tone,
   onClick,
 }: {
   icon: typeof Copy
   label: string
+  hint?: string
+  tone?: 'private' | 'public'
   onClick: () => void
 }) {
   return (
     <button
       type="button"
-      aria-label={label}
-      title={label}
+      title={hint ? `${label} — ${hint}` : label}
       onClick={onClick}
-      className="inline-grid h-8 w-8 place-items-center rounded-full text-ink-muted transition-colors hover:bg-ink-line/60 hover:text-ink-text"
+      className={cn(
+        'flex flex-col items-start gap-0.5 rounded-lg px-2.5 py-1.5 text-left transition-colors',
+        'hover:bg-ink-line/60',
+        tone === 'private' && 'text-amber hover:bg-amber/10',
+        tone === 'public' && 'text-teal-soft hover:bg-teal/10',
+        !tone && 'text-ink-muted hover:text-ink-text',
+      )}
     >
-      <Icon size={15} />
+      <span className="flex items-center gap-1.5 text-xs font-medium">
+        <Icon size={13} />
+        {label}
+      </span>
+      {hint && <span className="text-[0.6rem] leading-none text-ink-faint">{hint}</span>}
     </button>
   )
 }

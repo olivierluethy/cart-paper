@@ -8,6 +8,7 @@ import { useNoteActions } from '@/features/reader/useAnnotations'
 import { mediaUrl } from '@/lib/api'
 import { EMPTY_DOC, isEmptyDoc } from '@/lib/doc'
 import { quoteExcerpt } from '@/lib/anchor'
+import { VisibilityBanner } from '@/features/reader/privacy'
 import { cn } from '@/lib/utils'
 import type { Anchor, HighlightColor, JSONContent, Note, NoteAttachment, UUID } from '@/lib/types'
 
@@ -27,6 +28,8 @@ type Props = {
   pageId?: UUID | null
   highlightId?: UUID | null
   highlightColor?: HighlightColor | null
+  /** Carried over when the reader escalates from the quick composer. */
+  initialText?: string
   onDone: () => void
 }
 
@@ -38,10 +41,16 @@ export function NoteEditorModal({
   pageId,
   highlightId,
   highlightColor,
+  initialText,
   onDone,
 }: Props) {
   const actions = useNoteActions(bookRef, invite)
-  const [body, setBody] = useState<JSONContent>(note?.body ?? EMPTY_DOC)
+  const [body, setBody] = useState<JSONContent>(
+    note?.body ??
+      (initialText?.trim()
+        ? { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: initialText }] }] }
+        : EMPTY_DOC),
+  )
   const [drafts, setDrafts] = useState<DraftAttachment[]>([])
   const [adding, setAdding] = useState<'link' | 'quote' | null>(null)
   const [linkUrl, setLinkUrl] = useState('')
@@ -113,6 +122,7 @@ export function NoteEditorModal({
       }
     >
       <div className="space-y-5">
+        <VisibilityBanner visibility="private" />
         {passage && (
           <blockquote
             className={cn(

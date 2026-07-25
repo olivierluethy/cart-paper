@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'motion/react'
-import { ChevronLeft, ChevronRight, PanelRight, Settings2, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Lock, MessageSquare, PanelRight, Pencil, Settings2, X } from 'lucide-react'
 import type { Editor } from '@tiptap/react'
 import { PageView } from '@/features/reader/PageView'
 import { SelectionToolbar } from '@/features/reader/SelectionToolbar'
@@ -11,7 +11,9 @@ import { MarginMarkers, type Marker } from '@/features/reader/MarginMarkers'
 import { NoteEditorModal } from '@/features/reader/NoteEditorModal'
 import { PassageCommentModal } from '@/features/reader/PassageCommentModal'
 import { useAnnotationLayer, type DiscussionMarker } from '@/features/reader/useAnnotationLayer'
-import { useHighlightActions, useHighlights, useNotes } from '@/features/reader/useAnnotations'
+import { useHighlightActions, useHighlights, useNoteActions, useNotes } from '@/features/reader/useAnnotations'
+import { NoteComposerPopover, type ComposerTarget } from '@/features/reader/NoteComposerPopover'
+import { PRIVACY } from '@/features/reader/privacy'
 import {
   useHeartbeat,
   useProgress,
@@ -52,6 +54,7 @@ export function ReaderPage() {
   const notes = useNotes(slug, invite)
   const comments = useAllComments(slug, invite)
   const highlightActions = useHighlightActions(slug, invite)
+  const noteActions = useNoteActions(slug, invite)
 
   const list = useMemo(() => pages.data ?? [], [pages.data])
   const [index, setIndex] = useState(0)
@@ -64,6 +67,8 @@ export function ReaderPage() {
   const [tab, setTab] = useState<PanelTab>('marks')
   const [pendingScroll, setPendingScroll] = useState<string | null>(null)
   const [markers, setMarkers] = useState<Marker[]>([])
+  const [composer, setComposer] = useState<ComposerTarget | null>(null)
+  const [savingNote, setSavingNote] = useState(false)
 
   const resumeChecked = useRef(false)
   const deepLinkDone = useRef(false)
@@ -210,18 +215,28 @@ export function ReaderPage() {
     const container = surface.current
     if (!container) return
     const replyCounts = new Map(discussions.map((item) => [item.id, item.replies]))
+    const byId = new Map((highlights.data ?? []).map((item) => [item.id, item]))
 
     const measure = () => {
       const bounds = container.getBoundingClientRect()
       const next: Marker[] = []
       for (const item of layer.resolved) {
-        if (item.kind !== 'discussion') continue
         const rect = layer.rectFor(item.id)
         if (!rect) continue
+        const top = rect.top - bounds.top + container.scrollTop
+
+        if (item.kind === 'discussion') {
+          next.push({ kind: 'discussion', id: item.id, replies: replyCounts.get(item.id) ?? 0, top })
+          continue
+        }
+        // A highlight either carries a note, or advertises that it could.
+        const highlight = byId.get(item.id)
+        if (!highlight) continue
         next.push({
+          kind: highlight.note_id ? 'note' : 'add-note',
           id: item.id,
-          replies: replyCounts.get(item.id) ?? 0,
-          top: rect.top - bounds.top + container.scrollTop,
+          color: highlight.color,
+          top,
         })
       }
       setMarkers(next)
@@ -233,7 +248,7 @@ export function ReaderPage() {
       cancelAnimationFrame(frame)
       window.removeEventListener('resize', measure)
     }
-  }, [layer.resolved, layer.rectFor, discussions, index])
+  }, [layer.resolved, layer.rectFor, discussions, highlights.data, index])
 
   // ----------------------------------------------------------------- selection
   const readSelection = useCallback(() => {
@@ -277,19 +292,51 @@ export function ReaderPage() {
   }
 
   const applyHighlight = (color: HighlightColor) =>
-    void requireAuth(() => {
+    void requireAuth(async () => {
       if (!currentAnchor || !page) return
+      const anchor = currentAnchor
+      const pageId = page.id
+      const rect = selection?.rect ?? null
+
       if (highlightUnderSelection) {
+        // Re-clicking the active colour removes it; any other colour recolours.
         if (highlightUnderSelection.color === color) {
           highlightActions.remove.mutate(highlightUnderSelection.id)
+          clearSelection()
         } else {
           highlightActions.recolor.mutate({ id: highlightUnderSelection.id, color })
+          clearSelection()
         }
-      } else {
-        highlightActions.create.mutate({ page_id: page.id, anchor: currentAnchor, color })
+        return
       }
+
       clearSelection()
+      const created = await highlightActions.create
+        .mutateAsync({ page_id: pageId, anchor, color })
+        .catch(() => null)
+      // Attaching a private note is offered the moment the highlight exists,
+      // rather than left to be discovered by hovering the margin.
+      if (created && rect) {
+        setComposer({ highlightId: created.id, anchor, pageId, color, rect })
+      }
     }, 'Create an account to highlight passages.')
+
+  const saveComposerNote = async (text: string) => {
+    if (!composer) return
+    setSavingNote(true)
+    try {
+      await noteActions.create.mutateAsync({
+        highlight_id: composer.highlightId,
+        page_id: composer.pageId,
+        anchor: composer.anchor,
+        body: { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text }] }] },
+      })
+      setComposer(null)
+      toast.success('Private note saved — only you can see it.')
+    } finally {
+      setSavingNote(false)
+    }
+  }
 
   const openNoteForSelection = () =>
     void requireAuth(() => {
@@ -381,11 +428,13 @@ export function ReaderPage() {
       index={index}
       total={list.length}
       percent={percent}
-      badge={noteList.length + highlightList.length + threads.length}
+      noteCount={noteList.length}
+      discussionCount={threads.length}
       panelOpen={panelOpen}
       tab={tab}
       onTab={setTab}
       onTogglePanel={() => setPanelOpen((value) => !value)}
+      onOpenPanel={() => setPanelOpen(true)}
       onSettings={() => open(({ close }) => <SettingsModal onDone={close} />)}
       panel={
         tab === 'marks' ? (
@@ -465,10 +514,34 @@ export function ReaderPage() {
         <MarginMarkers
           markers={markers}
           activeId={activeId}
-          onOpen={(id) => {
-            setActiveId(id)
-            setTab('discussion')
-            setPanelOpen(true)
+          onOpen={(marker) => {
+            setActiveId(marker.id)
+            if (marker.kind === 'discussion') {
+              setTab('discussion')
+              setPanelOpen(true)
+              return
+            }
+            if (marker.kind === 'note') {
+              const note = noteList.find((item) => item.highlight_id === marker.id)
+              if (note) {
+                open(({ close }) => (
+                  <NoteEditorModal bookRef={slug} invite={invite} note={note} onDone={close} />
+                ))
+                return
+              }
+            }
+            // "+ note" on a highlight that has none yet.
+            const highlight = (highlights.data ?? []).find((item) => item.id === marker.id)
+            const rect = layer.rectFor(marker.id)
+            if (highlight && rect) {
+              setComposer({
+                highlightId: highlight.id,
+                anchor: highlight.anchor,
+                pageId: highlight.page_id,
+                color: highlight.color,
+                rect,
+              })
+            }
           }}
         />
 
@@ -501,6 +574,33 @@ export function ReaderPage() {
               onComment: openCommentForSelection,
               onCopy: () => void copySelection(),
               onQuote: () => void quoteSelection(),
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {composer && (
+          <NoteComposerPopover
+            target={composer}
+            saving={savingNote}
+            onSave={(text) => void saveComposerNote(text)}
+            onDismiss={() => setComposer(null)}
+            onExpand={(text) => {
+              const target = composer
+              setComposer(null)
+              open(({ close }) => (
+                <NoteEditorModal
+                  bookRef={slug}
+                  invite={invite}
+                  anchor={target.anchor}
+                  pageId={target.pageId}
+                  highlightId={target.highlightId}
+                  highlightColor={target.color}
+                  initialText={text}
+                  onDone={close}
+                />
+              ))
             }}
           />
         )}
@@ -560,11 +660,13 @@ function ReaderShell({
   index,
   total,
   percent,
-  badge,
+  noteCount,
+  discussionCount,
   panelOpen,
   tab,
   onTab,
   onTogglePanel,
+  onOpenPanel,
   onSettings,
   panel,
   children,
@@ -574,11 +676,13 @@ function ReaderShell({
   index: number
   total: number
   percent: number
-  badge: number
+  noteCount: number
+  discussionCount: number
   panelOpen: boolean
   tab: PanelTab
   onTab: (tab: PanelTab) => void
   onTogglePanel: () => void
+  onOpenPanel: () => void
   onSettings: () => void
   panel: React.ReactNode
   children: React.ReactNode
@@ -605,16 +709,39 @@ function ReaderShell({
           <IconButton label="Reading settings" onClick={onSettings}>
             <Settings2 size={17} />
           </IconButton>
+          {/* Two separate counts, so private and public never read as one pile. */}
+          <button
+            type="button"
+            onClick={() => {
+              onTab('marks')
+              onOpenPanel()
+            }}
+            aria-label={`Your private notes — ${noteCount}`}
+            title={PRIVACY.private.full}
+            className="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-amber transition-colors hover:bg-amber/10"
+          >
+            <Pencil size={14} />
+            <span className="tabular-nums">{noteCount}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              onTab('discussion')
+              onOpenPanel()
+            }}
+            aria-label={`Public discussions — ${discussionCount}`}
+            title={PRIVACY.public.full}
+            className="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-teal-soft transition-colors hover:bg-teal/10"
+          >
+            <MessageSquare size={14} />
+            <span className="tabular-nums">{discussionCount}</span>
+          </button>
           <IconButton
             label={panelOpen ? 'Hide the side panel' : 'Show notes and discussions'}
             active={panelOpen}
             onClick={onTogglePanel}
-            className="relative"
           >
             <PanelRight size={17} />
-            {badge > 0 && !panelOpen && (
-              <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-amber" aria-hidden />
-            )}
           </IconButton>
         </header>
 
@@ -637,20 +764,32 @@ function ReaderShell({
         )}
       >
         <div className="flex h-14 shrink-0 items-center gap-1 border-b border-ink-line px-2">
-          {(['marks', 'discussion'] as PanelTab[]).map((value) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => onTab(value)}
-              aria-current={tab === value}
-              className={cn(
-                'rounded-md px-3 py-1.5 text-xs capitalize transition-colors',
-                tab === value ? 'bg-ink-line/60 text-ink-text' : 'text-ink-muted hover:text-ink-text',
-              )}
-            >
-              {value === 'marks' ? 'Your marks' : 'Discussion'}
-            </button>
-          ))}
+          <button
+            type="button"
+            onClick={() => onTab('marks')}
+            aria-current={tab === 'marks'}
+            title={PRIVACY.private.full}
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs transition-colors',
+              tab === 'marks' ? 'bg-amber/15 text-amber' : 'text-ink-muted hover:text-ink-text',
+            )}
+          >
+            <Lock size={11} />
+            Private · {noteCount}
+          </button>
+          <button
+            type="button"
+            onClick={() => onTab('discussion')}
+            aria-current={tab === 'discussion'}
+            title={PRIVACY.public.full}
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs transition-colors',
+              tab === 'discussion' ? 'bg-teal/20 text-teal-soft' : 'text-ink-muted hover:text-ink-text',
+            )}
+          >
+            <MessageSquare size={11} />
+            Public · {discussionCount}
+          </button>
           <IconButton label="Close panel" onClick={onTogglePanel} className="ml-auto">
             <X size={16} />
           </IconButton>
