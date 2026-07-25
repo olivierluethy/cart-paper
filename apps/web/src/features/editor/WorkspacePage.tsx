@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, PanelLeft, PanelRight } from 'lucide-react'
+import { ArrowLeft, Eye, PanelLeft, PanelRight, Send, Users } from 'lucide-react'
 import { Button, IconButton } from '@/components/Button'
 import { Loading, ErrorState } from '@/components/States'
 import { PageRail } from '@/features/editor/PageRail'
@@ -18,6 +18,8 @@ import {
   useReorderPages,
   useSavePage,
 } from '@/lib/books'
+import { InviteModal } from '@/features/publishing/InviteModal'
+import { usePublishing } from '@/features/publishing/usePublishing'
 import { firstHeading } from '@/lib/doc'
 import { useModal } from '@/lib/modal'
 import { useToast } from '@/lib/toast'
@@ -28,7 +30,8 @@ export function WorkspacePage() {
   const { bookId = '' } = useParams()
   const navigate = useNavigate()
   const toast = useToast()
-  const { confirm } = useModal()
+  const { confirm, open } = useModal()
+  const publishing = usePublishing(bookId)
 
   const book = useBook(bookId)
   const pages = usePages(bookId)
@@ -127,9 +130,56 @@ export function WorkspacePage() {
         </div>
 
         <SaveIndicator state={autosave.state} className="mr-1 hidden sm:inline-flex" />
-        <Button variant="ghost" size="sm" onClick={() => autosave.flush()}>
-          Save
+
+        <IconButton
+          label="Preview as a reader"
+          onClick={() => {
+            autosave.flush()
+            navigate(`/books/${book.data!.slug}`)
+          }}
+        >
+          <Eye size={16} />
+        </IconButton>
+        <Button
+          variant="ghost"
+          size="sm"
+          icon={<Users size={14} />}
+          className="hidden sm:inline-flex"
+          onClick={() => open(({ close }) => <InviteModal book={book.data!} onDone={close} />)}
+        >
+          Invite
         </Button>
+        {book.data.status === 'draft' ? (
+          <Button
+            variant="primary"
+            size="sm"
+            icon={<Send size={14} />}
+            loading={publishing.publish.isPending}
+            onClick={() => {
+              autosave.flush()
+              publishing.publish.mutate()
+            }}
+          >
+            Publish
+          </Button>
+        ) : (
+          <Button
+            variant="secondary"
+            size="sm"
+            loading={publishing.unpublish.isPending}
+            onClick={async () => {
+              const ok = await confirm({
+                title: 'Unpublish this book?',
+                body: 'It leaves the public library and becomes a private draft again. Comments, highlights and ratings are kept.',
+                confirmLabel: 'Unpublish',
+              })
+              if (ok) publishing.unpublish.mutate()
+            }}
+          >
+            Unpublish
+          </Button>
+        )}
+
         <IconButton
           label="Toggle settings"
           className="xl:hidden"
