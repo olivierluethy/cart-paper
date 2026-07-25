@@ -13,6 +13,9 @@ venv/
 .mypy_cache/
 .ruff_cache/
 .DS_Store
-data/
-uploads/
+# Anchored to the repo root on purpose: an unanchored `data/` matches a
+# directory of that name at ANY depth, which silently excluded the bundled
+# common-password list at apps/api/app/data/.
+/data/
+/uploads/
 apps/web/package-lock.json.bak
