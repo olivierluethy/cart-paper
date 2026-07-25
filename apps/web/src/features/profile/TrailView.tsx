@@ -244,14 +244,12 @@ function TrailRow({
             {replying && (
               <div className="mt-3">
                 <CommentComposer
-                  placeholder="Continue the thread…"
+                  mention={entry.comment.author?.display_name ?? null}
+                  placeholder="Reply…"
                   busy={actions.create.isPending}
                   onCancel={() => setReplying(false)}
                   onSubmit={async (body) => {
-                    await actions.create.mutateAsync({
-                      body,
-                      parent_id: entry.comment!.thread_id ?? entry.comment!.id,
-                    })
+                    await actions.create.mutateAsync({ body, parent_id: entry.comment!.id })
                     setReplying(false)
                     onChanged()
                   }}
