@@ -3,6 +3,7 @@ import { BookOpen } from 'lucide-react'
 import { Modal } from '@/components/Modal'
 import { Button } from '@/components/Button'
 import { Field } from '@/components/Field'
+import { PasswordField } from '@/components/PasswordField'
 import { useAuth } from '@/lib/auth'
 import { useToast } from '@/lib/toast'
 import { ApiError, api } from '@/lib/api'
@@ -82,12 +83,10 @@ export function RegisterModal({ reason, onDone, onSwitch }: Props) {
           autoComplete="email"
           required
         />
-        <Field
-          label="Password"
-          type="password"
+        <PasswordField
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="At least 8 characters"
+          placeholder="At least 10 characters"
           autoComplete="new-password"
           required
           error={error}
@@ -164,9 +163,7 @@ export function LoginModal({ reason, onDone, onSwitch }: Props) {
           autoComplete="email"
           required
         />
-        <Field
-          label="Password"
-          type="password"
+        <PasswordField
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           autoComplete="current-password"

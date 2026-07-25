@@ -38,18 +38,37 @@ export function Modal({
   const titleId = useId()
   const descId = useId()
 
+  // onClose is almost always an inline arrow from the caller, so it changes
+  // identity on every render. Keeping it in a ref is what allows the effects
+  // below to run once instead of on every keystroke.
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+
+  // Mount only. This effect moves focus, and re-running it while the user is
+  // typing would yank the caret back to the first field after each character.
   useEffect(() => {
     const previouslyFocused = document.activeElement as HTMLElement | null
     const node = panel.current
     // Focus the first meaningful control, not the close button.
-    const first = node?.querySelectorAll<HTMLElement>(FOCUSABLE)
-    const target = Array.from(first ?? []).find((el) => !el.hasAttribute('data-modal-close'))
+    const focusable = node?.querySelectorAll<HTMLElement>(FOCUSABLE)
+    const target = Array.from(focusable ?? []).find((el) => !el.hasAttribute('data-modal-close'))
     ;(target ?? node)?.focus()
 
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = previousOverflow
+      previouslyFocused?.focus?.()
+    }
+  }, [])
+
+  // Escape + focus trap. Reads onClose through the ref, so it never re-binds.
+  useEffect(() => {
+    const node = panel.current
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.stopPropagation()
-        onClose()
+        onCloseRef.current()
         return
       }
       if (event.key !== 'Tab' || !node) return
@@ -69,14 +88,8 @@ export function Modal({
     }
 
     document.addEventListener('keydown', onKey, true)
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.removeEventListener('keydown', onKey, true)
-      document.body.style.overflow = previousOverflow
-      previouslyFocused?.focus?.()
-    }
-  }, [onClose])
+    return () => document.removeEventListener('keydown', onKey, true)
+  }, [])
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
