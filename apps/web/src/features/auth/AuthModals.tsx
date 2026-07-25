@@ -4,6 +4,9 @@ import { Modal } from '@/components/Modal'
 import { Button } from '@/components/Button'
 import { Field } from '@/components/Field'
 import { PasswordField } from '@/components/PasswordField'
+import { PasswordStrength } from '@/features/auth/PasswordStrength'
+import { GeneratePasswordButton } from '@/features/auth/GeneratePassword'
+import { copyPasswordToClipboard, clearClipboardIfOurs } from '@/features/auth/passwords'
 import { useAuth } from '@/lib/auth'
 import { useToast } from '@/lib/toast'
 import { ApiError, api } from '@/lib/api'
@@ -23,12 +26,29 @@ export function RegisterModal({ reason, onDone, onSwitch }: Props) {
   const [displayName, setDisplayName] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [bits, setBits] = useState<number | null>(null)
+  const [revealGenerated, setRevealGenerated] = useState(false)
+
+  const acceptGenerated = async (value: string, entropy: number) => {
+    setPassword(value)
+    setBits(entropy)
+    setRevealGenerated(true)
+    const outcome = await copyPasswordToClipboard(value)
+    if (outcome === 'copied') {
+      toast.success('Password copied — save it in your password manager now.', {
+        label: 'Clear clipboard',
+        onClick: () => void clearClipboardIfOurs(value),
+      })
+    } else {
+      toast.info('Copy it from the field — the clipboard is unavailable here.')
+    }
+  }
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
     setError(null)
-    if (password.length < 8) {
-      setError('Passwords need at least 8 characters.')
+    if (password.length < 10) {
+      setError('Passwords need at least 10 characters.')
       return
     }
     setBusy(true)
@@ -84,12 +104,19 @@ export function RegisterModal({ reason, onDone, onSwitch }: Props) {
           required
         />
         <PasswordField
+          key={revealGenerated ? 'revealed' : 'hidden'}
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={(e) => {
+            setPassword(e.target.value)
+            setBits(null)
+          }}
           placeholder="At least 10 characters"
           autoComplete="new-password"
           required
           error={error}
+          revealed={revealGenerated}
+          action={<GeneratePasswordButton onAccept={acceptGenerated} />}
+          below={<PasswordStrength password={password} generatedBits={bits} />}
         />
         <p className="flex items-start gap-2 rounded-md border border-ink-line bg-ink-bg/60 px-3 py-2.5 text-xs leading-relaxed text-ink-faint">
           <BookOpen size={14} className="mt-0.5 shrink-0 text-amber/70" />

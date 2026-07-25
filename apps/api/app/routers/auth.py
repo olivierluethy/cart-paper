@@ -27,6 +27,7 @@ from app.schemas.user import (
 )
 from app.services import mail
 from app.services.handles import unique_handle
+from app.services.password_policy import validate as validate_password
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -38,6 +39,14 @@ async def register(payload: RegisterIn, response: Response, db: DbSession) -> Us
     There is no confirmation mail and no second login form — the caller is
     signed in by the time this responds.
     """
+    problem = validate_password(payload.password)
+    if problem:
+        # Field-level, so the form can point at the password input itself.
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            [{"loc": ["body", "password"], "msg": problem, "type": "value_error"}],
+        )
+
     email = payload.email.strip().lower()
     existing = await db.scalar(select(User.id).where(func.lower(User.email) == email))
     if existing is not None:
