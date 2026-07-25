@@ -14,12 +14,16 @@ import { BlockStyle } from '@/features/editor/extensions/BlockStyle'
 import { CartImage } from '@/features/editor/extensions/CartImage'
 import { FontScale } from '@/features/editor/extensions/FontScale'
 import { SlashCommand, type SlashController } from '@/features/editor/extensions/SlashCommand'
+import { Annotations } from '@/features/reader/extensions/Annotations'
 
 export function bookExtensions(options: {
   placeholder?: string
   slash?: SlashController | null
 }): Extensions {
   return [
+    // Reader annotations ride along in the editor too, so a single set of
+    // extensions renders a page identically in both places.
+    Annotations,
     StarterKit.configure({
       heading: { levels: [1, 2, 3, 4] },
       codeBlock: { HTMLAttributes: { spellcheck: 'false' } },
