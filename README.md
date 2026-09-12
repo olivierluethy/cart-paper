@@ -1,4 +1,17 @@
-# CART Paper
+<div align="center">
+  <img src="apps/web/public/favicon.svg" alt="CART Paper logo" width="140" />
+  <h1>CART Paper</h1>
+  <p><b>A social reading and writing platform with line-anchored discussions.</b><br/>Write multi-page books in a rich editor, publish or privately share them, and start a threaded discussion anchored to exactly the passage you selected.</p>
+  <p>
+    <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-blue.svg"></a>
+    <img alt="React" src="https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black">
+    <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white">
+    <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white">
+    <img alt="PostgreSQL" src="https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white">
+  </p>
+</div>
+
+---
 
 A social reading and writing platform. Write multi-page books in a rich editor, publish them or
 share a private draft, and — the part that matters — **select a passage on a page and start a
@@ -357,3 +370,13 @@ cracked-password list are refused. The strength meter never blocks — only thos
 - There is no test suite, by design. `npm run smoke` covers boot, migrations, `/health` and one
   authenticated round-trip; see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) → Testing.
 - Nothing is ever pushed to a remote by the tooling here; the repository is local only.
+
+
+## License
+
+Released under the [MIT License](LICENSE) © 2026 Olivier Lüthy. You're free to use, modify and distribute this
+software, including commercially, as long as the copyright notice and license are included.
+
+## Author
+
+Built by **Olivier Lüthy** — [GitHub](https://github.com/olivierluethy).
